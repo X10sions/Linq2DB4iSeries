@@ -11,8 +11,7 @@ namespace LinqToDB.DataProvider.DB2iSeries
 	using Common;
 	using Data;
 	using SchemaProvider;
-	using System.Data.Common;
-
+	
 	public class DB2iSeriesSchemaProvider : SchemaProviderBase
 	{
 		protected override List<ColumnInfo> GetColumns(DataConnection dataConnection)

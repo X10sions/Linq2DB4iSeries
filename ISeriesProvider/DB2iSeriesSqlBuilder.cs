@@ -412,9 +412,13 @@ namespace LinqToDB.DataProvider.DB2iSeries
 
 		protected override string GetProviderTypeName(IDbDataParameter parameter)
 		{
-			dynamic p = parameter;
-			return p.iDB2DbType.ToString();
-		}
+            dynamic p = parameter;
+            var pType = p.GetType();
+            if (pType.Name == "DB2Parameter")
+                return p.DB2Type.ToString();
+            else
+                return p.iDB2DbType.ToString();
+        }
 
 		protected override void BuildCreateTableNullAttribute(SqlField field, DefaultNullable defaulNullable)
 		{
@@ -457,7 +461,7 @@ namespace LinqToDB.DataProvider.DB2iSeries
 
 					var ep = (SqlPredicate.ExprExpr)predicate;
 
-					if (ep.Expr1 is SqlFunction function && function.Name == "Date")
+                    if (ep.Expr1 is SqlFunction function && function.Name == "Date")
 					{
 						if (ep.Expr2 is SqlParameter parameter)
 						{
