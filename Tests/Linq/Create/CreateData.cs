@@ -18,10 +18,8 @@ using Tests.Model;
 [Order(-1)]
 // ReSharper disable once InconsistentNaming
 // ReSharper disable once TestClassNameSuffixWarning
-public class a_CreateData : TestBase
-{
-	static void RunScript(string configString, string divider, string name, Action<IDbConnection>? action = null, string? database = null)
-	{
+public class a_CreateData : TestBase {
+	static void RunScript(string configString, string divider, string name, Action<IDbConnection>? action = null, string? database = null) {
 		Console.WriteLine("=== " + name + " === \n");
 
 		var scriptFolder = Path.Combine(Path.GetFullPath("."), "Database", "Create Scripts");
@@ -32,11 +30,10 @@ public class a_CreateData : TestBase
 
 		var text = File.ReadAllText(sqlFileName);
 
-		while (true)
-		{
+		while(true) {
 			var idx = text.IndexOf("SKIP " + configString + " BEGIN");
 
-			if (idx >= 0)
+			if(idx >= 0)
 				text = text.Substring(0, idx) + text.Substring(text.IndexOf("SKIP " + configString + " END", idx));
 			else
 				break;
@@ -51,42 +48,34 @@ public class a_CreateData : TestBase
 			.Where(c => !string.IsNullOrEmpty(c))
 			.ToArray();
 
-		if (DataConnection.TraceSwitch.TraceInfo)
+		if(DataConnection.TraceSwitch.TraceInfo)
 			Console.WriteLine("Commands count: {0}", cmds.Length);
 
 		Exception? exception = null;
 
-		using (var db = new TestDataConnection(configString))
-		{
+		using(var db = new TestDataConnection(configString)) {
 			//db.CommandTimeout = 20;
 
-			foreach (var command in cmds)
-			{
-				try
-				{
-					if (DataConnection.TraceSwitch.TraceInfo)
+			foreach(var command in cmds) {
+				try {
+					if(DataConnection.TraceSwitch.TraceInfo)
 						Console.WriteLine(command);
 
-					if (configString == ProviderName.OracleNative || configString == TestProvName.Oracle11Native)
-					{
+					if(configString == ProviderName.OracleNative || configString == TestProvName.Oracle11Native) {
 						// we need this to avoid errors in trigger creation when native provider
 						// recognize ":NEW" as parameter
 						var cmd = db.CreateCommand();
 						cmd.CommandText = command;
 						((dynamic)cmd).BindByName = false;
 						cmd.ExecuteNonQuery();
-					}
-					else
+					} else
 						db.Execute(command);
 
-					if (DataConnection.TraceSwitch.TraceInfo)
+					if(DataConnection.TraceSwitch.TraceInfo)
 						Console.WriteLine("\nOK\n");
-				}
-				catch (Exception ex)
-				{
-					if (DataConnection.TraceSwitch.TraceError)
-					{
-						if (!DataConnection.TraceSwitch.TraceInfo)
+				} catch(Exception ex) {
+					if(DataConnection.TraceSwitch.TraceError) {
+						if(!DataConnection.TraceSwitch.TraceInfo)
 							Console.WriteLine(command);
 
 						var isDrop =
@@ -95,15 +84,16 @@ public class a_CreateData : TestBase
 
 						Console.WriteLine(ex.Message);
 
-						if (isDrop)
-						{
+						if(ex.Message.Contains("SQL0198")) {
+							Console.WriteLine("\nOK: command was empty\n");
+						} else if(ex.Message.Contains("SQL0204") && command.ToUpper().Contains("DROP")) {
+							Console.WriteLine("\nOK: DROP object was not found \n");
+						} else if(isDrop) {
 							Console.WriteLine("\nnot too OK\n");
-						}
-						else
-						{
+						} else {
 							Console.WriteLine("\nFAILED\n");
 
-							if (exception == null)
+							if(exception == null)
 								exception = ex;
 						}
 
@@ -111,10 +101,18 @@ public class a_CreateData : TestBase
 				}
 			}
 
-			if (exception != null)
+			if(exception != null)
 				throw exception;
 
-			if (DataConnection.TraceSwitch.TraceInfo)
+			action?.Invoke(db.Connection);
+		}
+	}
+
+	static void RunBulkCopy(string configString) {
+		using(var db = new TestDataConnection(configString)) {
+			//db.CommandTimeout = 20;
+
+			if(DataConnection.TraceSwitch.TraceInfo)
 				Console.WriteLine("\nBulkCopy LinqDataTypes\n");
 
 			var options = new BulkCopyOptions();
@@ -137,7 +135,7 @@ public class a_CreateData : TestBase
 					new LinqDataTypes2 { ID = 12, MoneyValue = 11.45m, DateTimeValue = new DateTime(2012, 11,   7, 19, 19, 29,  90), BoolValue = true,  GuidValue = new Guid("03021d18-97f0-4dc0-98d0-f0c7df4a1230"), SmallIntValue = 12, StringValue = "0"  }
 				});
 
-			if (DataConnection.TraceSwitch.TraceInfo)
+			if(DataConnection.TraceSwitch.TraceInfo)
 				Console.WriteLine("\nBulkCopy Parent\n");
 
 			db.BulkCopy(
@@ -153,7 +151,7 @@ public class a_CreateData : TestBase
 					new Parent { ParentID = 7, Value1 = 1    }
 				});
 
-			if (DataConnection.TraceSwitch.TraceInfo)
+			if(DataConnection.TraceSwitch.TraceInfo)
 				Console.WriteLine("\nBulkCopy Child\n");
 
 			db.BulkCopy(
@@ -179,7 +177,7 @@ public class a_CreateData : TestBase
 					new Child { ParentID = 7, ChildID = 77 }
 				});
 
-			if (DataConnection.TraceSwitch.TraceInfo)
+			if(DataConnection.TraceSwitch.TraceInfo)
 				Console.WriteLine("\nBulkCopy GrandChild\n");
 
 			db.BulkCopy(
@@ -229,17 +227,31 @@ public class a_CreateData : TestBase
 					new InheritanceChild2() {InheritanceChildId = 3, TypeDiscriminator = 2,    InheritanceParentId = 3, Name = "InheritanceParent2" }
 				});
 
-			action?.Invoke(db.Connection);
 		}
 	}
 
 	[Test, Order(0)]
-	public void CreateDatabase([CreateDatabaseSources] string context)
-	{
-		if (TestProvNameDb2i.IsiSeries(context))
-		{
-			var script = context.Contains("GAS") ? "DB2iSeriesGAS" : "DB2iSeries";
-			RunScript(context, "\nGO\n", script);
+	public void CreateDatabase([CreateDatabaseSources] string context) {
+		if(TestProvNameDb2i.IsiSeries(context)) {
+			//var script = context.Contains("GAS") ? "DB2iSeriesGAS" : "DB2iSeries";
+			//RunScript(context, "\nGO\n", script);
+			var divider = "\nGO\n";
+
+			RunScript(context, divider, "DB2iSeries-01-Drop");
+			RunScript(context, divider, "DB2iSeries-02-CreateTables");
+			if(context.Contains("GAS")) {
+				RunScript(context, divider, "DB2iSeries-03-Alter-GAS");
+			}
+			if(context.Contains(".54")) {
+				RunScript(context, divider, "DB2iSeries-03-Alter-v5r4");
+			} else {
+				RunScript(context, divider, "DB2iSeries-03-Alter-v7r1");
+			}
+			RunScript(context, divider, "DB2iSeries-04-CreateViews");
+			RunScript(context, divider, "DB2iSeries-05-Insert");
+
+			RunBulkCopy(context);
 		}
+
 	}
 }
