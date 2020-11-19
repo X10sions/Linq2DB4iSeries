@@ -1,68 +1,78 @@
-﻿namespace LinqToDB.DataProvider.DB2iSeries
-{
-	using LinqToDB.Tools;
+﻿using System.Linq;
+
+namespace LinqToDB.DataProvider.DB2iSeries {
 	using SqlProvider;
 
-	public class DB2iSeriesSqlProviderFlags
-	{
+	public class DB2iSeriesSqlProviderFlags {
 		public DB2iSeriesSqlProviderFlags(
-			bool supportsOffsetClause,
-			bool supportsTruncateTable,
+			DB2iSeriesVersion db2iVersion,
+			//bool supportsOffsetClause,
+			//bool supportsTruncateTable,
 			bool supportsNamedParameters,
-			bool supportsMergeStatement,
-			bool supportsNCharTypes)
+			bool mapGuidAsString)
+		//bool supportsMergeStatement,
+		//bool supportsNCharTypes)
 		{
-			SupportsOffsetClause = supportsOffsetClause;
-			SupportsTruncateTable = supportsTruncateTable;
+			version = db2iVersion;
+			MapGuidAsString = mapGuidAsString;
+			//SupportsOffsetClause = supportsOffsetClause;
+			//SupportsTruncateTable = supportsTruncateTable;
 			SupportsNamedParameters = supportsNamedParameters;
-			SupportsMergeStatement = supportsMergeStatement;
-			SupportsNCharTypes = supportsNCharTypes;
+			//SupportsMergeStatement = supportsMergeStatement;
+			//SupportsNCharTypes = supportsNCharTypes;
+
 		}
 
-		public DB2iSeriesSqlProviderFlags(SqlProviderFlags sqlProviderFlags)
-			:this(
-				 supportsOffsetClause: sqlProviderFlags.CustomFlags.Contains(Constants.ProviderFlags.SupportsOffsetClause),
-				 supportsTruncateTable: sqlProviderFlags.CustomFlags.Contains(Constants.ProviderFlags.SupportsTruncateTable),
-				 supportsNamedParameters: sqlProviderFlags.CustomFlags.Contains(Constants.ProviderFlags.SupportsNamedParameters),
-				 supportsMergeStatement: sqlProviderFlags.CustomFlags.Contains(Constants.ProviderFlags.SupportsMergeStatement),
-				 supportsNCharTypes: sqlProviderFlags.CustomFlags.Contains(Constants.ProviderFlags.SupportsNCharTypes))
-		{
-
+		public DB2iSeriesSqlProviderFlags(DB2iSeriesVersion db2iVersion, SqlProviderFlags sqlProviderFlags)
+			: this(
+					db2iVersion,
+					sqlProviderFlags.CustomFlags.Contains(Constants.ProviderFlags.SupportsNamedParameters),
+					sqlProviderFlags.CustomFlags.Contains(Constants.ProviderFlags.MapGuidAsString)
+				 ) {
 		}
 
 		public DB2iSeriesSqlProviderFlags(DB2iSeriesProviderOptions options)
 			: this(
-				 options.SupportsOffsetClause,
-				 options.SupportsTruncateTable,
-				 supportsNamedParameters: options.ProviderType.IsIBM(),
-				 supportsMergeStatement: options.SupportsMergeStatement,
-				 supportsNCharTypes: options.SupportsNCharTypes)
-		{
+					options.DB2iSeriesVersion,
+					options.ProviderType.IsIBM(),
+					options.MapGuidAsString
+					//options.SupportsOffsetClause,
+					//options.SupportsTruncateTable,
+					//supportsNamedParameters: options.ProviderType.IsIBM(),
+					//supportsMergeStatement: options.SupportsMergeStatement,
+					//supportsNCharTypes: options.SupportsNCharTypes
+					) {
 
 		}
 
 		public DB2iSeriesSqlProviderFlags(
 			DB2iSeriesVersion version,
-			DB2iSeriesProviderType providerType)
+			DB2iSeriesProviderType providerType,
+			bool mapGuidAsString)
 			: this(
-				 supportsOffsetClause: version >= DB2iSeriesVersion.V7_3,
-				 supportsTruncateTable: version >= DB2iSeriesVersion.V7_2,
-				 supportsNamedParameters: providerType.IsIBM(),
-				 supportsMergeStatement: version >= DB2iSeriesVersion.V7_1,
-				 supportsNCharTypes: version >= DB2iSeriesVersion.V7_1
-				 )
-		{
+					version,
+				 //supportsOffsetClause: version >= DB2iSeriesVersion.V7_3,
+				 //supportsTruncateTable: version >= DB2iSeriesVersion.V7_2,
+				 providerType.IsIBM(),
+				 //supportsMergeStatement: version >= DB2iSeriesVersion.V7_1,
+				 //supportsNCharTypes: version >= DB2iSeriesVersion.V7_1
+				 mapGuidAsString
+				 ) {
 
 		}
 
-		public bool SupportsOffsetClause { get; }
-		public bool SupportsTruncateTable { get; }
-		public bool SupportsNamedParameters { get; }
-		public bool SupportsMergeStatement { get; }
-		public bool SupportsNCharTypes { get; }
+		DB2iSeriesVersion version;
 
-		public void SetCustomFlags(SqlProviderFlags sqlProviderFlags)
-		{
+		public bool MapGuidAsString { get; }
+		public bool SupportsDecFloatTypes => version.SupportsDecFloatTypes();
+		public bool SupportsMergeStatement => version.SupportsMergeStatement();
+		public bool SupportsNamedParameters { get; }
+		public bool SupportsNCharTypes => version.SupportsNCharTypes();
+		public bool SupportsOffsetClause => version.SupportsOffsetClause();
+		public bool SupportsTruncateTable => version.SupportsTruncateTable();
+
+		public void SetCustomFlags(SqlProviderFlags sqlProviderFlags) {
+			sqlProviderFlags.SetFlag(Constants.ProviderFlags.MapGuidAsString, MapGuidAsString);
 			sqlProviderFlags.SetFlag(Constants.ProviderFlags.SupportsOffsetClause, SupportsOffsetClause);
 			sqlProviderFlags.SetFlag(Constants.ProviderFlags.SupportsTruncateTable, SupportsTruncateTable);
 			sqlProviderFlags.SetFlag(Constants.ProviderFlags.SupportsNamedParameters, SupportsNamedParameters);

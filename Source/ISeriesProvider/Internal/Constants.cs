@@ -1,19 +1,16 @@
-﻿namespace LinqToDB.DataProvider.DB2iSeries
-{
-	internal static class Constants
-	{
-		public static class ProviderFlags
-		{
+﻿namespace LinqToDB.DataProvider.DB2iSeries {
+	internal static class Constants {
+		public static class ProviderFlags {
 			public const string MapGuidAsString = "MapGuidAsString";
+			public const string SupportsDecFloatTypes = "SupportsDecFloatTypes";
+			public const string SupportsMergeStatement = "SupportsMergeStatement";
+			public const string SupportsNamedParameters = "SupportsNamedParameters";
+			public const string SupportsNCharTypes = "SupportsNCharTypes";
 			public const string SupportsOffsetClause = "SupportsOffsetClause";
 			public const string SupportsTruncateTable = "SupportsTruncateTable";
-			public const string SupportsNamedParameters = "SupportsNamedParameters";
-			public const string SupportsMergeStatement = "SupportsMergeStatement";
-			public const string SupportsNCharTypes = "SupportsNCharTypes";
 		}
 
-		public static class DbTypes
-		{
+		public static class DbTypes {
 			public const string Decimal = "DECIMAL";
 			public const string Numeric = "NUMERIC";
 			public const string Binary = "BINARY";
@@ -49,15 +46,7 @@
 			public const string DBClobUnicode = "DBCLOB CCSID 1200";
 		}
 
-		public static class SQL
-		{
-			public static string Delimiter(DB2iSeriesNamingConvention naming = DB2iSeriesNamingConvention.Sql)
-				=> naming == DB2iSeriesNamingConvention.Sql ? "." : "/";
-
-			public static string DummyTableName(DB2iSeriesNamingConvention naming = DB2iSeriesNamingConvention.Sql)
-				=> naming == DB2iSeriesNamingConvention.Sql ?
-					"SYSIBM.SYSDUMMY1" : "SYSIBM/SYSDUMMY1";
-
+		public static class SQL {
 			public const string LastInsertedIdentityGetter = "IDENTITY_VAL_LOCAL()";
 		}
 	}

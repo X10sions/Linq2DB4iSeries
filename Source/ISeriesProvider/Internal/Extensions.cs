@@ -1,56 +1,40 @@
 ﻿using LinqToDB.Common;
 using LinqToDB.Data;
 using LinqToDB.Mapping;
+using LinqToDB.SqlProvider;
 using LinqToDB.SqlQuery;
 using System;
-using System.Linq;
-using System.Data;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
-using LinqToDB.SqlProvider;
+using System.Linq;
 
-namespace LinqToDB.DataProvider.DB2iSeries
-{
-	internal static class Extensions
-	{
-		public static string ToSqlString(this DbDataType dbDataType)
-		{
-			return DB2iSeriesSqlBuilder.GetDbType(dbDataType.DbType, dbDataType.Length, dbDataType.Precision, dbDataType.Scale);
-		}
+namespace LinqToDB.DataProvider.DB2iSeries {
+	public static class Extensions {
+		public static string ToSqlString(this DbDataType dbDataType) => DB2iSeriesSqlBuilder.GetDbType(dbDataType.DbType, dbDataType.Length, dbDataType.Precision, dbDataType.Scale);
 
-		public static SqlDataType GetTypeOrUnderlyingTypeDataType(this MappingSchema mappingSchema, Type type)
-		{
+		public static SqlDataType GetTypeOrUnderlyingTypeDataType(this MappingSchema mappingSchema, Type type) {
 			var sqlDataType = mappingSchema.GetDataType(type);
-			if (sqlDataType.Type.DataType == DataType.Undefined)
+			if(sqlDataType.Type.DataType == DataType.Undefined)
 				sqlDataType = mappingSchema.GetUnderlyingDataType(type, out var _);
 
 			return sqlDataType.Type.DataType == DataType.Undefined ? SqlDataType.Undefined : sqlDataType;
 		}
 
-		public static bool IsGuidMappedAsString(this MappingSchema mappingSchema)
-		{
-			return mappingSchema is DB2iSeriesMappingSchemaBase iseriesMappingSchema
+		public static bool IsGuidMappedAsString(this MappingSchema mappingSchema) => mappingSchema is DB2iSeriesMappingSchemaBase iseriesMappingSchema
 				&& iseriesMappingSchema.GuidMappedAsString;
-		}
 
-		public static DbDataType GetDbDataType(this MappingSchema mappingSchema, Type systemType, DataType dataType, int? length, int? precision, int? scale, bool forceDefaultAttributes, bool supportsNCharTypes)
-		{
-			return DB2iSeriesDbTypes.GetDbDataType(systemType, dataType, length, precision, scale, mappingSchema.IsGuidMappedAsString(), forceDefaultAttributes, supportsNCharTypes);
-		}
+		public static DbDataType GetDbDataType(this MappingSchema mappingSchema, Type systemType, DataType dataType, int? length, int? precision, int? scale, bool forceDefaultAttributes, DB2iSeriesVersion db2iVersion) => DB2iSeriesDbTypes.GetDbDataType(systemType, dataType, length, precision, scale, mappingSchema.IsGuidMappedAsString(), forceDefaultAttributes, db2iVersion);
 
-		public static DbDataType GetDbTypeForCast(this MappingSchema mappingSchema, SqlDataType type)
-		{
-			return DB2iSeriesDbTypes.GetDbTypeForCast(type, mappingSchema);
-		}
+		public static DbDataType GetDbTypeForCast(this MappingSchema mappingSchema, SqlDataType type, DB2iSeriesVersion db2iVersion) => DB2iSeriesDbTypes.GetDbTypeForCast(type, mappingSchema, db2iVersion);
 
-		public static IDbConnection GetProviderConnection(this DataConnection dataConnection)
-		{
-			if (!(dataConnection.DataProvider is DB2iSeriesDataProvider iSeriesDataProvider))
+		public static IDbConnection GetProviderConnection(this DataConnection dataConnection) {
+			if(!(dataConnection.DataProvider is DB2iSeriesDataProvider iSeriesDataProvider))
 				throw ExceptionHelper.InvalidProvider(dataConnection.DataProvider);
 
 			var connection = iSeriesDataProvider.TryGetProviderConnection(dataConnection.Connection, dataConnection.MappingSchema);
 
-			if (connection == null)
+			if(connection == null)
 				throw ExceptionHelper.InvalidDbConnectionType(dataConnection.Connection);
 
 			return connection;
@@ -62,28 +46,24 @@ namespace LinqToDB.DataProvider.DB2iSeries
 		public static string GetQuotedLibList(this DataConnection dataConnection)
 			=> "'" + string.Join("','", dataConnection.GetLibList()) + "'";
 
-		public static IEnumerable<string> GetLibList(this DataConnection dataConnection)
-		{
+		public static IEnumerable<string> GetLibList(this DataConnection dataConnection) {
 			IEnumerable<string> libraries = new string[] { };
 			var connection = GetProviderConnection(dataConnection);
 
-			if (dataConnection.DataProvider is DB2iSeriesDataProvider iSeriesDataProvider)
-			{
-				var libraryListKey = iSeriesDataProvider.ProviderType switch
-				{
+			if(dataConnection.DataProvider is DB2iSeriesDataProvider iSeriesDataProvider) {
+				var libraryListKey = iSeriesDataProvider.ProviderOptions.ProviderType switch {
 #if NETFRAMEWORK
 					DB2iSeriesProviderType.AccessClient => "Library List",
 #endif
 					DB2iSeriesProviderType.Odbc => "DBQ",
 					DB2iSeriesProviderType.OleDb => "Library List",
 					DB2iSeriesProviderType.DB2 => "LibraryList",
-					_ => throw ExceptionHelper.InvalidAdoProvider(iSeriesDataProvider.ProviderType)
+					_ => throw ExceptionHelper.InvalidAdoProvider(iSeriesDataProvider.ProviderOptions.ProviderType)
 				};
 
 				var csb = new DbConnectionStringBuilder() { ConnectionString = dataConnection.ConnectionString };
 
-				if (csb.TryGetValue(libraryListKey, out var libraryList))
-				{
+				if(csb.TryGetValue(libraryListKey, out var libraryList)) {
 					return libraryList
 						.ToString()
 						.Split(',', ' ')
@@ -96,44 +76,34 @@ namespace LinqToDB.DataProvider.DB2iSeries
 			return Enumerable.Empty<string>();
 		}
 
-		public static string GetDelimiter(this DataConnection dataConnection)
-			=> Constants.SQL.Delimiter(dataConnection.GetNamingConvetion());
+		public static string GetDelimiter(this DataConnection dataConnection) => dataConnection.GetNamingConvetion().Delimiter();
 
-		public static DB2iSeriesNamingConvention GetNamingConvetion(this DataConnection dataConnection)
-		{
-			if (dataConnection.DataProvider is DB2iSeriesDataProvider iSeriesDataProvider
-				&& iSeriesDataProvider.ProviderType != DB2iSeriesProviderType.DB2)
-			{
-				var namingConventionKey = iSeriesDataProvider.ProviderType switch
-				{
+		public static DB2iSeriesNamingConvention GetNamingConvetion(this DataConnection dataConnection) {
+			if(dataConnection.DataProvider is DB2iSeriesDataProvider iSeriesDataProvider
+				&& iSeriesDataProvider.ProviderOptions.ProviderType != DB2iSeriesProviderType.DB2) {
+				var namingConventionKey = iSeriesDataProvider.ProviderOptions.ProviderType switch {
 #if NETFRAMEWORK
 					DB2iSeriesProviderType.AccessClient => "Naming",
 #endif
 					DB2iSeriesProviderType.Odbc => "NAM",
 					DB2iSeriesProviderType.OleDb => "Naming Convention",
-					_ => throw ExceptionHelper.InvalidAdoProvider(iSeriesDataProvider.ProviderType)
+					_ => throw ExceptionHelper.InvalidAdoProvider(iSeriesDataProvider.ProviderOptions.ProviderType)
 				};
-
 				var csb = new DbConnectionStringBuilder() { ConnectionString = dataConnection.ConnectionString };
-
-				if (csb.TryGetValue(namingConventionKey, out var namingConvention))
-				{
-					if (!(namingConvention is string namingConventionString))
+				if(csb.TryGetValue(namingConventionKey, out var namingConvention)) {
+					if(!(namingConvention is string namingConventionString))
 						namingConventionString = ((int)namingConvention).ToString();
-
 					return namingConventionString == "1" ? DB2iSeriesNamingConvention.System : DB2iSeriesNamingConvention.Sql;
 				}
 			}
-
 			return DB2iSeriesNamingConvention.Sql;
 		}
 
-		public static void SetFlag(this SqlProviderFlags sqlProviderFlags, string flag, bool isSet)
-		{
-			if (isSet && !sqlProviderFlags.CustomFlags.Contains(flag))
+		public static void SetFlag(this SqlProviderFlags sqlProviderFlags, string flag, bool isSet) {
+			if(isSet && !sqlProviderFlags.CustomFlags.Contains(flag))
 				sqlProviderFlags.CustomFlags.Add(flag);
 
-			if (!isSet && sqlProviderFlags.CustomFlags.Contains(flag))
+			if(!isSet && sqlProviderFlags.CustomFlags.Contains(flag))
 				sqlProviderFlags.CustomFlags.Remove(flag);
 		}
 
@@ -163,6 +133,6 @@ namespace LinqToDB.DataProvider.DB2iSeries
 
 		public static bool IsOdbcOrOleDb(this DB2iSeriesProviderType providerType)
 			 => providerType == DB2iSeriesProviderType.Odbc
-			||	providerType == DB2iSeriesProviderType.OleDb;
+			|| providerType == DB2iSeriesProviderType.OleDb;
 	}
 }

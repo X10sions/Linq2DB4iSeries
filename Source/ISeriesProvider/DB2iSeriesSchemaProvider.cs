@@ -7,21 +7,16 @@ using LinqToDB.Common;
 using LinqToDB.Data;
 using System.Data.Common;
 
-namespace LinqToDB.DataProvider.DB2iSeries
-{
-	public class DB2iSeriesSchemaProvider : SchemaProviderBase
-	{
+namespace LinqToDB.DataProvider.DB2iSeries {
+	public class DB2iSeriesSchemaProvider : SchemaProviderBase {
 		private readonly DB2iSeriesDataProvider provider;
 
-		public DB2iSeriesSchemaProvider(DB2iSeriesDataProvider provider)
-		{
+		public DB2iSeriesSchemaProvider(DB2iSeriesDataProvider provider) {
 			this.provider = provider;
 		}
 
-		protected override DataType GetDataType(string dataType, string columnType, long? length, int? prec, int? scale)
-		{
-			return dataType switch
-			{
+		protected override DataType GetDataType(string dataType, string columnType, long? length, int? prec, int? scale) {
+			return dataType switch {
 				"BIGINT" => DataType.Int64,
 				"BINARY" => DataType.Binary,
 				"BLOB" => DataType.Blob,
@@ -53,8 +48,7 @@ namespace LinqToDB.DataProvider.DB2iSeries
 			};
 		}
 
-		protected override List<ColumnInfo> GetColumns(DataConnection dataConnection, GetSchemaOptions options)
-		{
+		protected override List<ColumnInfo> GetColumns(DataConnection dataConnection, GetSchemaOptions options) {
 			var delimiter = dataConnection.GetDelimiter();
 			var sql = $@"
 				Select 
@@ -73,10 +67,8 @@ namespace LinqToDB.DataProvider.DB2iSeries
 				where System_Table_Schema in({dataConnection.GetQuotedLibList()})
 				 ";
 
-			ColumnInfo drf(IDataReader dr)
-			{
-				var ci = new ColumnInfo
-				{
+			ColumnInfo drf(IDataReader dr) {
+				var ci = new ColumnInfo {
 					DataType = dr["Data_Type"].ToString().TrimEnd(),
 					Description = dr["Column_Text"].ToString().TrimEnd(),
 					IsIdentity = dr["Is_Identity"].ToString().TrimEnd() == "YES",
@@ -93,8 +85,7 @@ namespace LinqToDB.DataProvider.DB2iSeries
 			return list;
 		}
 
-		protected override IReadOnlyCollection<ForeignKeyInfo> GetForeignKeys(DataConnection dataConnection, IEnumerable<TableSchema> tables, GetSchemaOptions options)
-		{
+		protected override IReadOnlyCollection<ForeignKeyInfo> GetForeignKeys(DataConnection dataConnection, IEnumerable<TableSchema> tables, GetSchemaOptions options) {
 			var delimiter = dataConnection.GetDelimiter();
 			var sql = $@"
 			  Select ref.Constraint_Name 
@@ -114,8 +105,7 @@ namespace LinqToDB.DataProvider.DB2iSeries
 			  ";
 
 			//And {GetSchemaFilter("col.TBCREATOR")}
-			ForeignKeyInfo drf(IDataReader dr) => new ForeignKeyInfo
-			{
+			ForeignKeyInfo drf(IDataReader dr) => new ForeignKeyInfo {
 				Name = dr["Constraint_Name"].ToString().TrimEnd(),
 				Ordinal = Converter.ChangeTypeTo<int>(dr["Ordinal_Position"]),
 				OtherColumn = dr["OtherColumn"].ToString().TrimEnd(),
@@ -127,8 +117,7 @@ namespace LinqToDB.DataProvider.DB2iSeries
 			return dataConnection.Query(drf, sql).ToList();
 		}
 
-		protected override IReadOnlyCollection<PrimaryKeyInfo> GetPrimaryKeys(DataConnection dataConnection, IEnumerable<TableSchema> tables, GetSchemaOptions options)
-		{
+		protected override IReadOnlyCollection<PrimaryKeyInfo> GetPrimaryKeys(DataConnection dataConnection, IEnumerable<TableSchema> tables, GetSchemaOptions options) {
 			var delimiter = dataConnection.GetDelimiter();
 			var sql = $@"
 			  Select cst.constraint_Name  
@@ -142,8 +131,7 @@ namespace LinqToDB.DataProvider.DB2iSeries
 			  Order By cst.table_SCHEMA, cst.table_NAME, col.Ordinal_position
 			  ";
 
-			PrimaryKeyInfo drf(IDataReader dr) => new PrimaryKeyInfo
-			{
+			PrimaryKeyInfo drf(IDataReader dr) => new PrimaryKeyInfo {
 				ColumnName = Convert.ToString(dr["Column_Name"]).TrimEnd(),
 				Ordinal = Converter.ChangeTypeTo<int>(dr["Ordinal_position"]),
 				PrimaryKeyName = Convert.ToString(dr["constraint_Name"]).TrimEnd(),
@@ -153,8 +141,7 @@ namespace LinqToDB.DataProvider.DB2iSeries
 			return dataConnection.Query(drf, sql).ToList();
 		}
 
-		protected override List<ProcedureInfo> GetProcedures(DataConnection dataConnection, GetSchemaOptions options)
-		{
+		protected override List<ProcedureInfo> GetProcedures(DataConnection dataConnection, GetSchemaOptions options) {
 			var sql = $@"
 			  Select
 				CAST(CURRENT_SERVER AS VARCHAR(128)) AS Catalog_Name
@@ -171,12 +158,10 @@ namespace LinqToDB.DataProvider.DB2iSeries
 			  ";
 
 			//And {GetSchemaFilter("col.TBCREATOR")}
-			var defaultSchema = dataConnection.Execute<string>("select current_schema from sysibm.sysdummy1");
+			var defaultSchema = dataConnection.Execute<string>($"select current_schema from {dataConnection.GetNamingConvetion().DummyTableName()}");
 
-			ProcedureInfo drf(IDataReader dr)
-			{
-				return new ProcedureInfo
-				{
+			ProcedureInfo drf(IDataReader dr) {
+				return new ProcedureInfo {
 					CatalogName = Convert.ToString(dr["Catalog_Name"]).TrimEnd(),
 					IsDefaultSchema = Convert.ToString(dr["Routine_Schema"]).TrimEnd() == defaultSchema,
 					IsFunction = Convert.ToString(dr["Routine_Type"]) == "FUNCTION",
@@ -192,8 +177,7 @@ namespace LinqToDB.DataProvider.DB2iSeries
 			return list;
 		}
 
-		protected override List<ProcedureParameterInfo> GetProcedureParameters(DataConnection dataConnection, IEnumerable<ProcedureInfo> procedures, GetSchemaOptions options)
-		{
+		protected override List<ProcedureParameterInfo> GetProcedureParameters(DataConnection dataConnection, IEnumerable<ProcedureInfo> procedures, GetSchemaOptions options) {
 			var sql = $@"
 			  Select 
 				CHARACTER_MAXIMUM_LENGTH
@@ -211,10 +195,8 @@ namespace LinqToDB.DataProvider.DB2iSeries
 			  ";
 
 			//And {GetSchemaFilter("col.TBCREATOR")}
-			ProcedureParameterInfo drf(IDataReader dr)
-			{
-				return new ProcedureParameterInfo
-				{
+			ProcedureParameterInfo drf(IDataReader dr) {
+				return new ProcedureParameterInfo {
 					DataType = Convert.ToString(dr["Parameter_Name"]),
 					IsIn = dr["Parameter_Mode"].ToString().Contains("IN"),
 					IsOut = dr["Parameter_Mode"].ToString().Contains("OUT"),
@@ -226,33 +208,28 @@ namespace LinqToDB.DataProvider.DB2iSeries
 					Scale = Converter.ChangeTypeTo<int?>(dr["Numeric_Scale"]),
 				};
 			}
-			
+
 			return dataConnection.Query(drf, sql).ToList();
 		}
 
-		protected override string GetProviderSpecificTypeNamespace()
-		{
-			return provider.ProviderType switch
-			{
+		protected override string GetProviderSpecificTypeNamespace() {
+			return provider.ProviderOptions.ProviderType switch {
 #if NETFRAMEWORK
 				DB2iSeriesProviderType.AccessClient => DB2iSeriesAccessClientProviderAdapter.AssemblyName,
 #endif
 				DB2iSeriesProviderType.Odbc => OdbcProviderAdapter.AssemblyName,
 				DB2iSeriesProviderType.OleDb => OleDbProviderAdapter.AssemblyName,
 				DB2iSeriesProviderType.DB2 => DB2.DB2ProviderAdapter.AssemblyName,
-				_ => throw ExceptionHelper.InvalidAdoProvider(provider.ProviderType)
+				_ => throw ExceptionHelper.InvalidAdoProvider(provider.ProviderOptions.ProviderType)
 			};
 		}
 
-		protected override List<DataTypeInfo> GetDataTypes(DataConnection dataConnection)
-		{
-			if (provider.ProviderType.IsOdbc())
-			{
+		protected override List<DataTypeInfo> GetDataTypes(DataConnection dataConnection) {
+			if(provider.ProviderOptions.ProviderType.IsOdbc()) {
 				DataTypesSchema = ((DbConnection)dataConnection.Connection).GetSchema("DataTypes");
 
 				return DataTypesSchema.AsEnumerable()
-					.Select(t => new DataTypeInfo
-					{
+					.Select(t => new DataTypeInfo {
 						TypeName = t.Field<string>("TypeName"),
 						DataType = t.Field<string>("TypeName") == "XML" ? "System.String" : t.Field<string>("DataType"),
 						CreateFormat = t.Field<string>("CreateFormat"),
@@ -260,14 +237,11 @@ namespace LinqToDB.DataProvider.DB2iSeries
 						ProviderDbType = t.Field<string>("TypeName") == "XML" ? (int)OdbcProviderAdapter.OdbcType.NText : t.Field<int>("ProviderDbType"),
 					})
 					.ToList();
-			}
-			else if (provider.ProviderType.IsDB2())
-			{
+			} else if(provider.ProviderOptions.ProviderType.IsDB2()) {
 				DataTypesSchema = ((DbConnection)dataConnection.Connection).GetSchema("DataTypes");
 
 				return DataTypesSchema.AsEnumerable()
-					.Select(t => new DataTypeInfo
-					{
+					.Select(t => new DataTypeInfo {
 						TypeName = t.Field<string>("SQL_TYPE_NAME"),
 						DataType = t.Field<string>("FRAMEWORK_TYPE"),
 						CreateParameters = t.Field<string>("CREATE_PARAMS"),
@@ -278,13 +252,11 @@ namespace LinqToDB.DataProvider.DB2iSeries
 					new DataTypeInfo { TypeName = "CHARACTER", CreateParameters = "LENGTH", DataType = "System.String" }
 					})
 					.ToList();
-			}
-			else
+			} else
 				return base.GetDataTypes(dataConnection);
 		}
 
-		protected override List<TableInfo> GetTables(DataConnection dataConnection, GetSchemaOptions options)
-		{
+		protected override List<TableInfo> GetTables(DataConnection dataConnection, GetSchemaOptions options) {
 			var sql = $@"
 				  Select 
 					CAST(CURRENT_SERVER AS VARCHAR(128)) AS Catalog_Name
@@ -299,10 +271,9 @@ namespace LinqToDB.DataProvider.DB2iSeries
 				  Order By System_Table_Schema, System_Table_Name
 				 ";
 
-			var defaultSchema = dataConnection.Execute<string>("select current_schema from sysibm.sysdummy1");
-			
-			TableInfo drf(IDataReader dr) => new TableInfo
-			{
+			var defaultSchema = dataConnection.Execute<string>($"select current_schema from {dataConnection.GetNamingConvetion().DummyTableName()}");
+
+			TableInfo drf(IDataReader dr) => new TableInfo {
 				CatalogName = dr["Catalog_Name"].ToString().TrimEnd(),
 				Description = dr["Table_Text"].ToString().TrimEnd(),
 				IsDefaultSchema = dr["System_Table_Schema"].ToString().TrimEnd() == defaultSchema,
@@ -311,24 +282,22 @@ namespace LinqToDB.DataProvider.DB2iSeries
 				TableID = dataConnection.Connection.Database + "." + dr["Table_Schema"].ToString().TrimEnd() + "." + dr["Table_Name"].ToString().TrimEnd(),
 				TableName = dr["Table_Name"].ToString().TrimEnd()
 			};
-			
+
 			return dataConnection.Query(drf, sql).ToList();
 		}
 
 		#region Helpers
 
-		private static void SetColumnParameters(ColumnInfo ci, long? size, int? scale)
-		{
-			switch (ci.DataType)
-			{
+		private static void SetColumnParameters(ColumnInfo ci, long? size, int? scale) {
+			switch(ci.DataType) {
 				case "DECIMAL":
 				case "NUMERIC":
-					if ((size ?? 0) > 0)
+					if((size ?? 0) > 0)
 						ci.Precision = (int?)size.Value;
-					
-					if ((scale ?? 0) > 0)
+
+					if((scale ?? 0) > 0)
 						ci.Scale = scale;
-					
+
 					break;
 				case "BINARY":
 				case "BLOB":

@@ -3,33 +3,27 @@ using System.Threading;
 using System.Threading.Tasks;
 
 
-namespace LinqToDB.DataProvider.DB2iSeries
-{
+namespace LinqToDB.DataProvider.DB2iSeries {
 	using Data;
-		
-	partial class DB2iSeriesBulkCopy : BasicBulkCopy
-	{
+
+	partial class DB2iSeriesBulkCopy : BasicBulkCopy {
 		const int MAX_ALLOWABLE_MULTIPLE_ROWS_BATCH_SIZE = 100;
 
 		private readonly DB2iSeriesDataProvider dataProvider;
 
-		public DB2iSeriesBulkCopy(DB2iSeriesDataProvider dataProvider)
-		{
+		public DB2iSeriesBulkCopy(DB2iSeriesDataProvider dataProvider) {
 			this.dataProvider = dataProvider;
 		}
 
 		protected override BulkCopyRowsCopied ProviderSpecificCopy<T>(
 			ITable<T> table,
 			BulkCopyOptions options,
-			IEnumerable<T> source)
-		{
-			if (table.DataContext is DataConnection dataConnection)
-			{
-				if (dataProvider.ProviderType.IsDB2()
-					&& dataProvider.Adapter.WrappedAdapter is DB2.DB2ProviderAdapter db2Adapter)
-				{
+			IEnumerable<T> source) {
+			if(table.DataContext is DataConnection dataConnection) {
+				if(dataProvider.ProviderOptions.ProviderType.IsDB2()
+					&& dataProvider.Adapter.WrappedAdapter is DB2.DB2ProviderAdapter db2Adapter) {
 					var connection = dataProvider.TryGetProviderConnection(dataConnection.Connection, dataConnection.MappingSchema);
-					if (connection != null)
+					if(connection != null)
 						return ProviderSpecificCopyImpl_DB2(
 							table,
 							options,
@@ -40,11 +34,10 @@ namespace LinqToDB.DataProvider.DB2iSeries
 							TraceAction);
 				}
 #if NETFRAMEWORK
-				else if (dataProvider.ProviderType.IsAccessClient()
-					&& dataProvider.Adapter.WrappedAdapter is DB2iSeriesAccessClientProviderAdapter idb2Adapter)
-				{
+				else if(dataProvider.ProviderOptions.ProviderType.IsAccessClient()
+					&& dataProvider.Adapter.WrappedAdapter is DB2iSeriesAccessClientProviderAdapter idb2Adapter) {
 					var connection = dataProvider.TryGetProviderConnection(dataConnection.Connection, dataConnection.MappingSchema);
-					if (connection != null)
+					if(connection != null)
 						// call the synchronous provider-specific implementation
 						return ProviderSpecificCopyImpl_AccessClient(
 							table,
@@ -60,15 +53,12 @@ namespace LinqToDB.DataProvider.DB2iSeries
 			return MultipleRowsCopy(table, options, source);
 		}
 
-		protected override Task<BulkCopyRowsCopied> ProviderSpecificCopyAsync<T>(ITable<T> table, BulkCopyOptions options, IEnumerable<T> source, CancellationToken cancellationToken)
-		{
-			if (table.DataContext is DataConnection dataConnection)
-			{
-				if (dataProvider.ProviderType.IsDB2()
-					&& dataProvider.Adapter.WrappedAdapter is DB2.DB2ProviderAdapter db2Adapter)
-				{
+		protected override Task<BulkCopyRowsCopied> ProviderSpecificCopyAsync<T>(ITable<T> table, BulkCopyOptions options, IEnumerable<T> source, CancellationToken cancellationToken) {
+			if(table.DataContext is DataConnection dataConnection) {
+				if(dataProvider.ProviderOptions.ProviderType.IsDB2()
+					&& dataProvider.Adapter.WrappedAdapter is DB2.DB2ProviderAdapter db2Adapter) {
 					var connection = dataProvider.TryGetProviderConnection(dataConnection.Connection, dataConnection.MappingSchema);
-					if (connection != null)
+					if(connection != null)
 						// call the synchronous provider-specific implementation as provider doesn't support async
 						return Task.FromResult(ProviderSpecificCopyImpl_DB2(
 							table,
@@ -80,11 +70,10 @@ namespace LinqToDB.DataProvider.DB2iSeries
 							TraceAction));
 				}
 #if NETFRAMEWORK
-				else if (dataProvider.ProviderType.IsAccessClient()
-					&& dataProvider.Adapter.WrappedAdapter is DB2iSeriesAccessClientProviderAdapter idb2Adapter)
-				{
+				else if(dataProvider.ProviderOptions.ProviderType.IsAccessClient()
+					&& dataProvider.Adapter.WrappedAdapter is DB2iSeriesAccessClientProviderAdapter idb2Adapter) {
 					var connection = dataProvider.TryGetProviderConnection(dataConnection.Connection, dataConnection.MappingSchema);
-					if (connection != null)
+					if(connection != null)
 						// call the synchronous provider-specific implementation as provider doesn't support async
 						return Task.FromResult(ProviderSpecificCopyImpl_AccessClient(
 							table,
@@ -106,7 +95,7 @@ namespace LinqToDB.DataProvider.DB2iSeries
 		{
 			if (table.DataContext is DataConnection dataConnection)
 			{
-				if (dataProvider.ProviderType == DB2iSeriesProviderType.DB2
+				if (dataProvider.ProviderOptions.ProviderType == DB2iSeriesProviderType.DB2
 					&& dataProvider.Adapter.WrappedAdapter is DB2.DB2ProviderAdapter adapter)
 				{
 					var connection = dataProvider.TryGetProviderConnection(dataConnection.Connection, dataConnection.MappingSchema);
@@ -141,24 +130,20 @@ namespace LinqToDB.DataProvider.DB2iSeries
 		}
 #endif
 
-		protected override BulkCopyRowsCopied MultipleRowsCopy<T>(ITable<T> table, BulkCopyOptions options, IEnumerable<T> source)
-		{
-			if ((options.MaxBatchSize ?? int.MaxValue) > MAX_ALLOWABLE_MULTIPLE_ROWS_BATCH_SIZE)
-			{
+		protected override BulkCopyRowsCopied MultipleRowsCopy<T>(ITable<T> table, BulkCopyOptions options, IEnumerable<T> source) {
+			if((options.MaxBatchSize ?? int.MaxValue) > MAX_ALLOWABLE_MULTIPLE_ROWS_BATCH_SIZE) {
 				options.MaxBatchSize = MAX_ALLOWABLE_MULTIPLE_ROWS_BATCH_SIZE;
 			}
 
-			return MultipleRowsCopy2(new DB2iSeriesMultipleRowsHelper<T>(table, options), source, " FROM " + Constants.SQL.DummyTableName());
+			return MultipleRowsCopy2(new DB2iSeriesMultipleRowsHelper<T>(table, options), source, " FROM " + dataProvider.ProviderOptions.NamingConvention.DummyTableName());
 		}
 
-		protected override Task<BulkCopyRowsCopied> MultipleRowsCopyAsync<T>(ITable<T> table, BulkCopyOptions options, IEnumerable<T> source, CancellationToken cancellationToken)
-		{
-			if ((options.MaxBatchSize ?? int.MaxValue) > MAX_ALLOWABLE_MULTIPLE_ROWS_BATCH_SIZE)
-			{
+		protected override Task<BulkCopyRowsCopied> MultipleRowsCopyAsync<T>(ITable<T> table, BulkCopyOptions options, IEnumerable<T> source, CancellationToken cancellationToken) {
+			if((options.MaxBatchSize ?? int.MaxValue) > MAX_ALLOWABLE_MULTIPLE_ROWS_BATCH_SIZE) {
 				options.MaxBatchSize = MAX_ALLOWABLE_MULTIPLE_ROWS_BATCH_SIZE;
 			}
 
-			return MultipleRowsCopy2Async(new DB2iSeriesMultipleRowsHelper<T>(table, options), source, " FROM " + Constants.SQL.DummyTableName(), cancellationToken);
+			return MultipleRowsCopy2Async(new DB2iSeriesMultipleRowsHelper<T>(table, options), source, " FROM " + dataProvider.ProviderOptions.NamingConvention.DummyTableName(), cancellationToken);
 		}
 
 #if !NETFRAMEWORK
@@ -169,7 +154,7 @@ namespace LinqToDB.DataProvider.DB2iSeries
 				options.MaxBatchSize = MAX_ALLOWABLE_MULTIPLE_ROWS_BATCH_SIZE;
 			}
 
-			return MultipleRowsCopy2Async(new DB2iSeriesMultipleRowsHelper<T>(table, options), source, " FROM " + Constants.SQL.DummyTableName(), cancellationToken);
+			return MultipleRowsCopy2Async(new DB2iSeriesMultipleRowsHelper<T>(table, options), source, " FROM " + dataProvider.ProviderOptions.NamingConvention.DummyTableName(), cancellationToken);
 		}
 #endif
 	}

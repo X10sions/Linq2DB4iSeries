@@ -18,111 +18,92 @@ using IBM.Data.DB2.iSeries;
 
 #nullable disable
 
-namespace Tests.DataProvider
-{
+namespace Tests.DataProvider {
 	using Model;
 
-	static class DB2iSeriesTestQueryExtensions
-	{
+	static class DB2iSeriesTestQueryExtensions {
 		public static T ExecuteScalar<T>(this DataConnection connection, string value, string castTo = null)
-			=> connection.Execute<T>(GetScalarQuery(value, castTo));
+			=> connection.Execute<T>(GetScalarQuery(value, connection.GetNamingConvetion(), castTo));
 
 
-		public static T ExecuteScalarParameter<T>(this DataConnection connection, string parameterName, string parameterType, object parameterValue, DataType? dataType = null)
-		{
+		public static T ExecuteScalarParameter<T>(this DataConnection connection, string parameterName, string parameterType, object parameterValue, DataType? dataType = null) {
 			var parameter = new DataParameter(parameterName, parameterValue);
 
 			return connection.ExecuteScalarParameter<T>(parameter, parameterType, dataType);
 		}
 
-		public static T ExecuteScalarParameter<T>(this DataConnection connection, DataParameter dataParameter, string parameterType, DataType? dataType = null)
-		{
-			if (connection.DataProvider is DB2iSeriesDataProvider iSeriesDataProvider
-				&& (iSeriesDataProvider.ProviderType == DB2iSeriesProviderType.Odbc
-					|| iSeriesDataProvider.ProviderType == DB2iSeriesProviderType.OleDb))
-			{
+		public static T ExecuteScalarParameter<T>(this DataConnection connection, DataParameter dataParameter, string parameterType, DataType? dataType = null) {
+			if(connection.DataProvider is DB2iSeriesDataProvider iSeriesDataProvider
+				&& (iSeriesDataProvider.ProviderOptions.ProviderType == DB2iSeriesProviderType.Odbc
+					|| iSeriesDataProvider.ProviderOptions.ProviderType == DB2iSeriesProviderType.OleDb)) {
 				dataParameter.Name = "?";
 			}
 
-			if (dataType.HasValue)
+			if(dataType.HasValue)
 				dataParameter.DataType = dataType.Value;
 
-			return connection.Execute<T>(GetScalarParameterQuery(dataParameter.Name, parameterType), dataParameter);
+			return connection.Execute<T>(GetScalarParameterQuery(dataParameter.Name, parameterType, connection.GetNamingConvetion()), dataParameter);
 		}
 
-		public static T ExecuteScalarParameterObject<T>(this DataConnection connection, string parameterName, string parameterType, object parameterValuesObject)
-		{
-			if (connection.DataProvider is DB2iSeriesDataProvider iSeriesDataProvider
-				&& (iSeriesDataProvider.ProviderType == DB2iSeriesProviderType.Odbc
-					|| iSeriesDataProvider.ProviderType == DB2iSeriesProviderType.OleDb))
-			{
+		public static T ExecuteScalarParameterObject<T>(this DataConnection connection, string parameterName, string parameterType, object parameterValuesObject) {
+			if(connection.DataProvider is DB2iSeriesDataProvider iSeriesDataProvider
+				&& (iSeriesDataProvider.ProviderOptions.ProviderType == DB2iSeriesProviderType.Odbc
+					|| iSeriesDataProvider.ProviderOptions.ProviderType == DB2iSeriesProviderType.OleDb)) {
 				parameterName = "?";
 			}
 
-			return connection.Execute<T>(GetScalarParameterQuery(parameterName, parameterType), parameterValuesObject);
+			return connection.Execute<T>(GetScalarParameterQuery(parameterName, parameterType, connection.GetNamingConvetion()), parameterValuesObject);
 		}
 
 		public static T ExecuteScalarParameterObject<T>(this DataConnection connection, string expression, object parameterValuesObject)
-		{
-			return connection.Execute<T>(GetScalarQuery(expression), parameterValuesObject);
-		}
+			=> connection.Execute<T>(GetScalarQuery(expression, connection.GetNamingConvetion()), parameterValuesObject);
 
-		private static string GetScalarQuery(string value, string castTo = null)
-		{
+		private static string GetScalarQuery(string value, DB2iSeriesNamingConvention naming, string castTo = null) {
 			var sb = new StringBuilder().Append("SELECT ");
-			if (!string.IsNullOrEmpty(castTo))
+			if(!string.IsNullOrEmpty(castTo))
 				sb.Append("CAST(");
 			sb.Append(value);
-			if (!string.IsNullOrEmpty(castTo))
+			if(!string.IsNullOrEmpty(castTo))
 				sb.Append(" AS ").Append(castTo).Append(")");
-			sb.Append(" FROM SYSIBM.SYSDUMMY1");
+			sb.Append($"FROM {naming.DummyTableName()}");
 			return sb.ToString();
 		}
 
-		private static string GetScalarParameterQuery(string parameterName, string parameterType)
-		{
+		private static string GetScalarParameterQuery(string parameterName, string parameterType, DB2iSeriesNamingConvention naming) {
 			var sb = new StringBuilder()
-				.Append("SELECT ")
-				.Append("CAST(")
-				.Append(parameterName == "?" ? "" : "@").Append(parameterName)
-				.Append(" AS ").Append(parameterType).Append(")")
-				.Append("FROM SYSIBM.SYSDUMMY1");
+				.Append($"SELECT CAST({(parameterName == "?" ? "" : "@")}{parameterName} AS {parameterType})")
+				.Append($"FROM {naming.DummyTableName()}");
 			return sb.ToString();
 		}
 
 		public static string AsQuoted(this string s) => $"'{s}'";
 
-		public static string GetParameterMarker(this DataConnection dataConnection, string parameterName, string? castTo = null)
-		{
+		public static string GetParameterMarker(this DataConnection dataConnection, string parameterName, string? castTo = null) {
 			return GetValueSql(
 				dataConnection.DataProvider is DB2iSeriesDataProvider iSeriesDataProvider
-				&& (iSeriesDataProvider.ProviderType == DB2iSeriesProviderType.Odbc
-					|| iSeriesDataProvider.ProviderType == DB2iSeriesProviderType.OleDb)
+				&& (iSeriesDataProvider.ProviderOptions.ProviderType == DB2iSeriesProviderType.Odbc
+					|| iSeriesDataProvider.ProviderOptions.ProviderType == DB2iSeriesProviderType.OleDb)
 				? "?" : parameterName, castTo);
 		}
 
-		public static string GetValueSql(string expression, string castTo = null)
-		{
+		public static string GetValueSql(string expression, string castTo = null) {
 			var sb = new StringBuilder();
-			if (!string.IsNullOrEmpty(castTo))
+			if(!string.IsNullOrEmpty(castTo))
 				sb.Append("CAST(");
 
 			sb.Append(expression == "?" ? "" : "@").Append(expression);
 
-			if (!string.IsNullOrEmpty(castTo))
+			if(!string.IsNullOrEmpty(castTo))
 				sb.Append(" AS ").Append(castTo).Append(")");
 			return sb.ToString();
 		}
 	}
 
 	[TestFixture]
-	public class DB2iSeriesTests : TestBase
-	{
+	public class DB2iSeriesTests : TestBase {
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestParameters(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
+		public void TestParameters(string context) {
+			using(var conn = new DataConnection(context)) {
 				Assert.That(conn.ExecuteScalarParameterObject<string>("p", "varchar(10)", new { p = 1 }),
 					Is.EqualTo("1"));
 				Assert.That(conn.ExecuteScalarParameterObject<string>("p", "varchar(10)", new { p = "1" }),
@@ -166,8 +147,7 @@ namespace Tests.DataProvider
 			bool skipNotNull = false,
 			bool skipDefined = false,
 			bool skipDefault = false,
-			bool skipUndefined = false)
-		{
+			bool skipUndefined = false) {
 			var type = typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(Nullable<>)
 				? typeof(T).GetGenericArguments()[0]
 				: typeof(T);
@@ -183,12 +163,10 @@ namespace Tests.DataProvider
 
 			int? id;
 
-			if (!skipNull && !skipPass && PassNullSql != null)
-			{
+			if(!skipNull && !skipPass && PassNullSql != null) {
 				sql = string.Format(PassNullSql, fieldName, tableName, conn.GetParameterMarker("p", castTo), conn.GetParameterMarker("p1", castTo), conn.GetParameterMarker("p2", castTo));
 
-				if (!skipDefinedNull && dataType != DataType.Undefined)
-				{
+				if(!skipDefinedNull && dataType != DataType.Undefined) {
 					// Get NULL ID with dataType.
 					//
 					Debug.WriteLine("{0} {1}:{2} -> NULL ID with dataType", fieldName, (object)type.Name, dataType);
@@ -197,8 +175,7 @@ namespace Tests.DataProvider
 					Assert.That(id, Is.EqualTo(1));
 				}
 
-				if (!skipDefaultNull)
-				{
+				if(!skipDefaultNull) {
 					// Get NULL ID with default dataType.
 					//
 					Debug.WriteLine("{0} {1}:{2} -> NULL ID with default dataType", fieldName, (object)type.Name, dataType);
@@ -206,8 +183,7 @@ namespace Tests.DataProvider
 					Assert.That(id, Is.EqualTo(1));
 				}
 
-				if (!skipUndefinedNull)
-				{
+				if(!skipUndefinedNull) {
 					// Get NULL ID without dataType.
 					//
 					Debug.WriteLine("{0} {1}:{2} -> NULL ID without dataType", fieldName, (object)type.Name, dataType);
@@ -223,12 +199,10 @@ namespace Tests.DataProvider
 			sql = string.Format(GetValueSql, fieldName, tableName);
 			value = conn.Execute<T>(sql);
 
-			if (!skipNotNull && !skipPass)
-			{
+			if(!skipNotNull && !skipPass) {
 				sql = string.Format(PassValueSql, fieldName, tableName, conn.GetParameterMarker("p", castTo));
 
-				if (!skipDefined && dataType != DataType.Undefined)
-				{
+				if(!skipDefined && dataType != DataType.Undefined) {
 					// Get value ID with dataType.
 					//
 					Debug.WriteLine("{0} {1}:{2} -> value ID with dataType", fieldName, (object)type.Name, dataType);
@@ -236,8 +210,7 @@ namespace Tests.DataProvider
 					Assert.That(id, Is.EqualTo(2));
 				}
 
-				if (!skipDefault)
-				{
+				if(!skipDefault) {
 					// Get value ID with default dataType.
 					//
 					Debug.WriteLine("{0} {1}:{2} -> value ID with default dataType", fieldName, (object)type.Name, dataType);
@@ -245,8 +218,7 @@ namespace Tests.DataProvider
 					Assert.That(id, Is.EqualTo(2));
 				}
 
-				if (!skipUndefined)
-				{
+				if(!skipUndefined) {
 					// Get value ID without dataType.
 					//
 					Debug.WriteLine("{0} {1}:{2} -> value ID without dataType", fieldName, (object)type.Name, dataType);
@@ -262,10 +234,8 @@ namespace Tests.DataProvider
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
 		//DecFloatTests break on AccessClient with cultures that have a different decimal point than period.
 		[SetCulture("en-US")]
-		public void TestDataTypes(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
+		public void TestDataTypes(string context) {
+			using(var conn = new DataConnection(context)) {
 				Assert.That(TestType<decimal?>(conn, "decfloat16DataType", DataType.Decimal, castTo: "DECIMAL(20, 10)"), Is.EqualTo(888.456m));
 				Assert.That(TestType<decimal?>(conn, "decfloat34DataType", DataType.Decimal, castTo: "DECIMAL(20, 10)"), Is.EqualTo(777.987m));
 
@@ -310,8 +280,7 @@ namespace Tests.DataProvider
 				Assert.That(conn.Execute<byte[]>("SELECT rowidDataType FROM AllTypes WHERE ID = 2").Length, Is.Not.EqualTo(0));
 
 				//XML not supported in ODBC driver
-				if (!context.ToUpper().Contains("ODBC"))
-				{
+				if(!context.ToUpper().Contains("ODBC")) {
 					Assert.That(TestType<string>(conn, "xmlDataType", DataType.Xml, skipPass: true),
 						Is.EqualTo("<root><element strattr=\"strvalue\" intattr=\"12345\"/></root>"));
 				}
@@ -322,10 +291,8 @@ namespace Tests.DataProvider
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All_AccessClient)]
 		//DecFloatTests break on AccessClient with cultures that have a different decimal point than period.
 		[SetCulture("en-US")]
-		public void TestDataTypes_AccessClient(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
+		public void TestDataTypes_AccessClient(string context) {
+			using(var conn = new DataConnection(context)) {
 				Assert.That(TestType<iDB2BigInt?>(conn, "bigintDataType", DataType.Int64), Is.EqualTo(new iDB2BigInt(1000000L)));
 				Assert.That(TestType<iDB2Integer?>(conn, "intDataType", DataType.Int32), Is.EqualTo(new iDB2Integer(444444)));
 				Assert.That(TestType<iDB2SmallInt?>(conn, "smallintDataType", DataType.Int16), Is.EqualTo(new iDB2SmallInt(100)));
@@ -348,11 +315,10 @@ namespace Tests.DataProvider
 			}
 		}
 #endif
-		static void TestNumeric<T>(DataConnection conn, T expectedValue, DataType dataType, string skip = "")
-		{
+		static void TestNumeric<T>(DataConnection conn, T expectedValue, DataType dataType, string skip = "") {
 			var skipTypes = skip.Split(' ');
 
-			foreach (var sqlType in new[]
+			foreach(var sqlType in new[]
 			{
 				"bigint",
 				"int",
@@ -361,8 +327,7 @@ namespace Tests.DataProvider
 				"decfloat",
 				"double",
 				"real"
-			}.Except(skipTypes))
-			{
+			}.Except(skipTypes)) {
 				var sqlValue = expectedValue is bool ? (bool)(object)expectedValue ? 1 : 0 : (object)expectedValue;
 				var sql = string.Format("VALUES Cast({0} as {1})", sqlValue ?? "NULL", sqlType);
 				Debug.WriteLine(sql + " -> " + typeof(T));
@@ -371,8 +336,7 @@ namespace Tests.DataProvider
 
 			string castType = "real";
 
-			switch (dataType)
-			{
+			switch(dataType) {
 				case DataType.Boolean:
 				case DataType.Int16:
 				case DataType.Int32:
@@ -394,15 +358,13 @@ namespace Tests.DataProvider
 					break;
 				case DataType.VarNumeric:
 				case DataType.Decimal:
-					if (expectedValue != null)
-					{
+					if(expectedValue != null) {
 						var val = expectedValue.ToString();
 						int precision = val.Replace("-", "").Replace(".", "").Length;
 						int point = val.IndexOf(".");
 						int scale = point < 0 ? 0 : val.Length - point;
 						castType = string.Format("decimal({0}, {1})", precision, scale);
-					}
-					else
+					} else
 						castType = "decimal";
 
 					break;
@@ -429,8 +391,7 @@ namespace Tests.DataProvider
 		}
 
 		static void TestSimple<T>(DataConnection conn, T expectedValue, DataType dataType)
-			where T : struct
-		{
+			where T : struct {
 			TestNumeric<T>(conn, expectedValue, dataType);
 			TestNumeric<T?>(conn, expectedValue, dataType);
 			TestNumeric<T?>(conn, (T?)null, dataType);
@@ -439,12 +400,10 @@ namespace Tests.DataProvider
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
 		//Test uses string format to build sql values, invariant culture is needed
 		[SetCulture("en-US")]
-		public void TestNumerics(string context)
-		{
+		public void TestNumerics(string context) {
 			var skipDecFloat = TestProvNameDb2i.IsiSeriesOleDb(context) ? " decfloat" : "";
 
-			using (var conn = new DataConnection(context))
-			{
+			using(var conn = new DataConnection(context)) {
 				TestSimple<sbyte>(conn, 1, DataType.SByte);
 				TestSimple<short>(conn, 1, DataType.Int16);
 				TestSimple<int>(conn, 1, DataType.Int32);
@@ -488,10 +447,8 @@ namespace Tests.DataProvider
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestDate(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
+		public void TestDate(string context) {
+			using(var conn = new DataConnection(context)) {
 				var dateTime = new DateTime(2012, 12, 12);
 
 				Assert.That(
@@ -504,8 +461,7 @@ namespace Tests.DataProvider
 					conn.ExecuteScalarParameter<DateTime>("p", "date", dateTime, DataType.Date), Is.EqualTo(dateTime));
 
 				//iSeries native provider cannot assign datetime parameter to date
-				if (!TestProvNameDb2i.IsiSeriesAccessClient(context))
-				{
+				if(!TestProvNameDb2i.IsiSeriesAccessClient(context)) {
 					Assert.That(
 					conn.ExecuteScalarParameter<DateTime>("p", "date", dateTime), Is.EqualTo(dateTime));
 				}
@@ -513,10 +469,8 @@ namespace Tests.DataProvider
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestDateTime(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
+		public void TestDateTime(string context) {
+			using(var conn = new DataConnection(context)) {
 				var dateTime = new DateTime(2012, 12, 12, 12, 12, 12);
 
 				Assert.That(
@@ -536,10 +490,8 @@ namespace Tests.DataProvider
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestTimeSpan(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
+		public void TestTimeSpan(string context) {
+			using(var conn = new DataConnection(context)) {
 				var time = new TimeSpan(12, 12, 12);
 				var dateTime = new DateTime(2012, 12, 12, 12, 12, 12);
 				var dateTimeOffset = new DateTimeOffset(2012, 12, 12, 12, 12, 12, TimeSpan.Zero);
@@ -567,13 +519,13 @@ namespace Tests.DataProvider
 
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestChar(string context)
-		{
-			var asciiChar = '1'; var quotedAsciiChar = asciiChar.ToString().AsQuoted();
-			var unicodeChar = 'α'; var quotedUnicodeChar = unicodeChar.ToString().AsQuoted();
+		public void TestChar(string context) {
+			var asciiChar = '1';
+			var quotedAsciiChar = asciiChar.ToString().AsQuoted();
+			var unicodeChar = 'α';
+			var quotedUnicodeChar = unicodeChar.ToString().AsQuoted();
 
-			using (var conn = new DataConnection(context))
-			{
+			using(var conn = new DataConnection(context)) {
 				Assert.That(conn.ExecuteScalar<char>(quotedAsciiChar, "char"), Is.EqualTo(asciiChar));
 				Assert.That(conn.ExecuteScalar<char?>(quotedAsciiChar, "char"), Is.EqualTo(asciiChar));
 				Assert.That(conn.ExecuteScalar<char>(quotedAsciiChar, "char(1)"), Is.EqualTo(asciiChar));
@@ -619,12 +571,12 @@ namespace Tests.DataProvider
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestString(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
-				var asciiText = "123ab"; var quotedAsciiText = asciiText.AsQuoted();
-				var unicodeText = "αβγδε"; var quotedUnicodeText = unicodeText.AsQuoted();
+		public void TestString(string context) {
+			using(var conn = new DataConnection(context)) {
+				var asciiText = "123ab";
+				var quotedAsciiText = asciiText.AsQuoted();
+				var unicodeText = "αβγδε";
+				var quotedUnicodeText = unicodeText.AsQuoted();
 
 				Assert.That(conn.ExecuteScalar<string>(quotedAsciiText, "char(5)"), Is.EqualTo(asciiText));
 				Assert.That(conn.ExecuteScalar<string>(quotedAsciiText, "char(20)"), Is.EqualTo(asciiText));
@@ -692,14 +644,12 @@ namespace Tests.DataProvider
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestBinary(string context)
-		{
+		public void TestBinary(string context) {
 			// results are going to be bytes from EDCIDC character set
 			var arr1 = new byte[] { 241, 242 };
 			var arr2 = new byte[] { 241, 242, 243, 244 };
 
-			using (var conn = new DataConnection(context))
-			{
+			using(var conn = new DataConnection(context)) {
 				Assert.That(
 					conn.ExecuteScalar<byte[]>("'12'", "char(2) for bit data"),
 					Is.EqualTo(arr1));
@@ -717,10 +667,8 @@ namespace Tests.DataProvider
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All_NonGAS)]
-		public void TestGuidBlob(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
+		public void TestGuidBlob(string context) {
+			using(var conn = new DataConnection(context)) {
 				var guid = new Guid();
 
 				Assert.That(
@@ -740,10 +688,8 @@ namespace Tests.DataProvider
 
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All_GAS)]
-		public void TestGuidAsString(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
+		public void TestGuidAsString(string context) {
+			using(var conn = new DataConnection(context)) {
 				var guid = new Guid();
 
 				Assert.That(
@@ -756,10 +702,8 @@ namespace Tests.DataProvider
 
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestXml(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
+		public void TestXml(string context) {
+			using(var conn = new DataConnection(context)) {
 				Assert.That(conn.ExecuteScalar<string>("'<xml/>'"), Is.EqualTo("<xml/>"));
 				Assert.That(conn.ExecuteScalar<XDocument>("'<xml/>'").ToString(), Is.EqualTo("<xml />"));
 				Assert.That(conn.ExecuteScalar<XmlDocument>("'<xml/>'").InnerXml, Is.EqualTo("<xml />"));
@@ -782,17 +726,14 @@ namespace Tests.DataProvider
 			}
 		}
 
-		enum TestEnum
-		{
+		enum TestEnum {
 			[MapValue("A")] AA,
 			[MapValue("B")] BB,
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestEnum1(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
+		public void TestEnum1(string context) {
+			using(var conn = new DataConnection(context)) {
 				Assert.That(conn.ExecuteScalar<TestEnum>("'A'"), Is.EqualTo(TestEnum.AA));
 				Assert.That(conn.ExecuteScalar<TestEnum?>("'A'"), Is.EqualTo(TestEnum.AA));
 				Assert.That(conn.ExecuteScalar<TestEnum>("'B'"), Is.EqualTo(TestEnum.BB));
@@ -801,10 +742,8 @@ namespace Tests.DataProvider
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestEnum2(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
+		public void TestEnum2(string context) {
+			using(var conn = new DataConnection(context)) {
 				Assert.That(
 					conn.ExecuteScalarParameterObject<string>("p", "nvarchar(10)", new { p = TestEnum.AA }),
 					Is.EqualTo("A"));
@@ -827,8 +766,7 @@ namespace Tests.DataProvider
 		}
 
 		[Table(Name = "ALLTYPES")]
-		public class ALLTYPE
-		{
+		public class ALLTYPE {
 			[PrimaryKey, Identity]
 			public int ID { get; set; } // INTEGER
 
@@ -897,8 +835,7 @@ namespace Tests.DataProvider
 		}
 
 		[Table(Name = "ALLTYPES2")]
-		public class ALLTYPE2
-		{
+		public class ALLTYPE2 {
 			[PrimaryKey, Identity]
 			public int ID { get; set; } // INTEGER
 
@@ -937,7 +874,7 @@ namespace Tests.DataProvider
 
 			[Column(DbType = "vargraphic(10)"), Nullable]
 			public string VARGRAPHICDATATYPE { get; set; } // GRAPHIC(10)
-			
+
 			[Column(DbType = "binary(20)"), Nullable]
 			public object BINARYDATATYPE { get; set; } // BINARY(20)
 
@@ -954,23 +891,18 @@ namespace Tests.DataProvider
 			public DateTime? TIMESTAMPDATATYPE { get; set; } // TIMESTAMP
 		}
 
-		void BulkCopyTest(string context, BulkCopyType bulkCopyType, int maxSize, int batchSize)
-		{
-			using (var conn = new DataConnection(context))
-			{
-				try
-				{
+		void BulkCopyTest(string context, BulkCopyType bulkCopyType, int maxSize, int batchSize) {
+			using(var conn = new DataConnection(context)) {
+				try {
 					conn.BulkCopy(
-						new BulkCopyOptions
-						{
+						new BulkCopyOptions {
 							MaxBatchSize = maxSize,
 							BulkCopyType = bulkCopyType,
 							NotifyAfter = 10000,
 							RowsCopiedCallback = copied => Debug.WriteLine(copied.RowsCopied)
 						},
 						Enumerable.Range(0, batchSize).Select(n =>
-							new ALLTYPE
-							{
+							new ALLTYPE {
 								ID = 2000 + n,
 								BIGINTDATATYPE = 3000 + n,
 								INTDATATYPE = 4000 + n,
@@ -994,35 +926,26 @@ namespace Tests.DataProvider
 								TIMESTAMPDATATYPE = DateTime.Now,
 								XMLDATATYPE = "<root><element strattr=\"strvalue\" intattr=\"12345\"/></root>"
 							}));
-				}
-				catch (Exception e)
-				{
+				} catch(Exception e) {
 					Assert.Fail(e.Message);
-				}
-				finally
-				{
+				} finally {
 					conn.GetTable<ALLTYPE>().Delete(p => p.DECIMALDATATYPE >= 6000);
 				}
 			}
 		}
 
-		void BulkCopyTest2(string context, BulkCopyType bulkCopyType, int maxSize, int batchSize)
-		{
-			using (var conn = new DataConnection(context))
-			{
-				try
-				{
+		void BulkCopyTest2(string context, BulkCopyType bulkCopyType, int maxSize, int batchSize) {
+			using(var conn = new DataConnection(context)) {
+				try {
 					conn.BulkCopy(
-						new BulkCopyOptions
-						{
+						new BulkCopyOptions {
 							MaxBatchSize = maxSize,
 							BulkCopyType = bulkCopyType,
 							NotifyAfter = 10000,
 							RowsCopiedCallback = copied => Debug.WriteLine(copied.RowsCopied)
 						},
 						Enumerable.Range(0, batchSize).Select(n =>
-							new ALLTYPE2
-							{
+							new ALLTYPE2 {
 								ID = 2000 + n,
 								BIGINTDATATYPE = 3000 + n,
 								INTDATATYPE = 4000 + n,
@@ -1042,45 +965,35 @@ namespace Tests.DataProvider
 								TIMEDATATYPE = TimeSpan.FromSeconds(10),
 								TIMESTAMPDATATYPE = DateTime.Now,
 							}));
-				}
-				catch (Exception e)
-				{
+				} catch(Exception e) {
 					Assert.Fail(e.Message);
-				}
-				finally
-				{
+				} finally {
 					conn.GetTable<ALLTYPE>().Delete(p => p.DECIMALDATATYPE >= 6000);
 				}
 			}
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void BulkCopyMultipleRows(string context)
-		{
+		public void BulkCopyMultipleRows(string context) {
 			BulkCopyTest(context, BulkCopyType.MultipleRows, 5000, 100);
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All_AccessClient, TestProvNameDb2i.All_DB2Connect)]
-		public void BulkCopyProviderSpecific(string context)
-		{
-			if (TestProvNameDb2i.IsiSeriesAccessClient(context))
+		public void BulkCopyProviderSpecific(string context) {
+			if(TestProvNameDb2i.IsiSeriesAccessClient(context))
 				BulkCopyTest2(context, BulkCopyType.ProviderSpecific, 50000, 100001);
-			if (TestProvNameDb2i.IsiSeriesDB2Connect(context))
+			if(TestProvNameDb2i.IsiSeriesDB2Connect(context))
 				BulkCopyTest(context, BulkCopyType.ProviderSpecific, 50000, 100001);
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void BulkCopyLinqTypesMultipleRows(string context)
-		{
-			using (var db = new DataConnection(context))
-			{
-				try
-				{
+		public void BulkCopyLinqTypesMultipleRows(string context) {
+			using(var db = new DataConnection(context)) {
+				try {
 					db.BulkCopy(
 						new BulkCopyOptions { BulkCopyType = BulkCopyType.MultipleRows },
 						Enumerable.Range(0, 10).Select(n =>
-							new LinqDataTypes
-							{
+							new LinqDataTypes {
 								ID = 4000 + n,
 								MoneyValue = 1000m + n,
 								DateTimeValue = new DateTime(2001, 1, 11, 1, 11, 21, 100),
@@ -1089,32 +1002,24 @@ namespace Tests.DataProvider
 								SmallIntValue = (short)n
 							}
 						));
-				}
-				catch (Exception e)
-				{
+				} catch(Exception e) {
 					Assert.Fail(e.ToString());
-				}
-				finally
-				{
+				} finally {
 					db.GetTable<LinqDataTypes>().Delete(p => p.ID >= 4000);
 				}
 			}
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestBinarySize(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
-				try
-				{
+		public void TestBinarySize(string context) {
+			using(var conn = new DataConnection(context)) {
+				try {
 					var data = new byte[500000];
 
-					for (var i = 0; i < data.Length; i++)
+					for(var i = 0; i < data.Length; i++)
 						data[i] = (byte)(i % byte.MaxValue);
 
-					conn.GetTable<ALLTYPE>().Insert(() => new ALLTYPE
-					{
+					conn.GetTable<ALLTYPE>().Insert(() => new ALLTYPE {
 						INTDATATYPE = 2000,
 						BLOBDATATYPE = data,
 					});
@@ -1125,30 +1030,24 @@ namespace Tests.DataProvider
 						.First();
 
 					Assert.AreEqual(data, blob);
-				}
-				finally
-				{
+				} finally {
 					conn.GetTable<ALLTYPE>().Delete(p => p.INTDATATYPE == 2000);
 				}
 			}
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestClobSize(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
-				try
-				{
+		public void TestClobSize(string context) {
+			using(var conn = new DataConnection(context)) {
+				try {
 					var sb = new StringBuilder();
 
-					for (var i = 0; i < 100000; i++)
+					for(var i = 0; i < 100000; i++)
 						sb.Append(((char)((i % (byte.MaxValue - 31)) + 32)).ToString());
 
 					var data = sb.ToString();
 
-					conn.GetTable<ALLTYPE>().Insert(() => new ALLTYPE
-					{
+					conn.GetTable<ALLTYPE>().Insert(() => new ALLTYPE {
 						INTDATATYPE = 2000,
 						CLOBDATATYPE = data,
 					});
@@ -1159,19 +1058,15 @@ namespace Tests.DataProvider
 						.First();
 
 					Assert.AreEqual(data, blob);
-				}
-				finally
-				{
+				} finally {
 					conn.GetTable<ALLTYPE>().Delete(p => p.INTDATATYPE == 2000);
 				}
 			}
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestAny(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
+		public void TestAny(string context) {
+			using(var conn = new DataConnection(context)) {
 				var person = conn.GetTable<Person>();
 
 				Assert.True(person.Any(p => p.ID == 2));
@@ -1181,10 +1076,8 @@ namespace Tests.DataProvider
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestOrderBySkipTake(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
+		public void TestOrderBySkipTake(string context) {
+			using(var conn = new DataConnection(context)) {
 				var person = conn.GetTable<Person>().OrderBy(p => p.LastName).Skip(2).Take(2);
 
 				var results = person.ToArray();
@@ -1196,10 +1089,8 @@ namespace Tests.DataProvider
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void TestOrderByDescendingSkipTake(string context)
-		{
-			using (var conn = new DataConnection(context))
-			{
+		public void TestOrderByDescendingSkipTake(string context) {
+			using(var conn = new DataConnection(context)) {
 				var person = conn.GetTable<Person>().OrderByDescending(p => p.LastName).Skip(2).Take(2);
 
 				var results = person.ToArray();
@@ -1211,10 +1102,8 @@ namespace Tests.DataProvider
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void CompareDate1(string context)
-		{
-			using (var db = GetDataContext(context))
-			{
+		public void CompareDate1(string context) {
+			using(var db = GetDataContext(context)) {
 				var expected = Types.Where(t => t.ID == 1 && t.DateTimeValue <= DateTime.Today);
 
 				var actual = db.Types.Where(t => t.ID == 1 && t.DateTimeValue <= DateTime.Today);
@@ -1224,12 +1113,10 @@ namespace Tests.DataProvider
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All)]
-		public void CompareDate2(string context)
-		{
+		public void CompareDate2(string context) {
 			var dt = Types2[3].DateTimeValue;
 
-			using (var db = GetDataContext(context))
-			{
+			using(var db = GetDataContext(context)) {
 				var expected = Types2.Where(t => t.DateTimeValue.Value.Date > dt.Value.Date);
 				var actual = db.Types2.Where(t => t.DateTimeValue.Value.Date > dt.Value.Date);
 
@@ -1238,8 +1125,7 @@ namespace Tests.DataProvider
 		}
 
 		[Table("InsertOrUpdateByte")]
-		class MergeTypesByte
-		{
+		class MergeTypesByte {
 			[Column("Id", IsIdentity = true)] [PrimaryKey] public int Id { get; set; }
 
 			[Column("FieldByteAsDecimal", DataType = DataType.Decimal, Length = 2, Precision = 0)] public byte FieldByte { get; set; }
@@ -1248,13 +1134,10 @@ namespace Tests.DataProvider
 		}
 
 		[Test, IncludeDataContextSource(TestProvNameDb2i.All_71, TestProvNameDb2i.All_72, TestProvNameDb2i.All_73)]
-		public void InsertOrUpdateWithIntegers(string context)
-		{
-			using (var db = new TestDataConnection(context))
-			{
+		public void InsertOrUpdateWithIntegers(string context) {
+			using(var db = new TestDataConnection(context)) {
 				LinqToDB.ITable<MergeTypesByte> table;
-				using (new DisableLogging())
-				{
+				using(new DisableLogging()) {
 					db.DropTable<MergeTypesByte>(throwExceptionIfNotExists: false);
 					table = db.CreateTable<MergeTypesByte>();
 				}
