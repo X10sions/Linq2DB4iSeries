@@ -1,26 +1,15 @@
-﻿using System.Linq;
-
-namespace LinqToDB.DataProvider.DB2iSeries {
+﻿namespace LinqToDB.DataProvider.DB2iSeries {
 	using SqlProvider;
 
 	public class DB2iSeriesSqlProviderFlags {
 		public DB2iSeriesSqlProviderFlags(
 			DB2iSeriesVersion db2iVersion,
-			//bool supportsOffsetClause,
-			//bool supportsTruncateTable,
 			bool supportsNamedParameters,
-			bool mapGuidAsString)
-		//bool supportsMergeStatement,
-		//bool supportsNCharTypes)
-		{
+			bool mapGuidAsString
+			) {
 			version = db2iVersion;
 			MapGuidAsString = mapGuidAsString;
-			//SupportsOffsetClause = supportsOffsetClause;
-			//SupportsTruncateTable = supportsTruncateTable;
 			SupportsNamedParameters = supportsNamedParameters;
-			//SupportsMergeStatement = supportsMergeStatement;
-			//SupportsNCharTypes = supportsNCharTypes;
-
 		}
 
 		public DB2iSeriesSqlProviderFlags(DB2iSeriesVersion db2iVersion, SqlProviderFlags sqlProviderFlags)
@@ -36,13 +25,7 @@ namespace LinqToDB.DataProvider.DB2iSeries {
 					options.DB2iSeriesVersion,
 					options.ProviderType.IsIBM(),
 					options.MapGuidAsString
-					//options.SupportsOffsetClause,
-					//options.SupportsTruncateTable,
-					//supportsNamedParameters: options.ProviderType.IsIBM(),
-					//supportsMergeStatement: options.SupportsMergeStatement,
-					//supportsNCharTypes: options.SupportsNCharTypes
 					) {
-
 		}
 
 		public DB2iSeriesSqlProviderFlags(
@@ -51,14 +34,9 @@ namespace LinqToDB.DataProvider.DB2iSeries {
 			bool mapGuidAsString)
 			: this(
 					version,
-				 //supportsOffsetClause: version >= DB2iSeriesVersion.V7_3,
-				 //supportsTruncateTable: version >= DB2iSeriesVersion.V7_2,
-				 providerType.IsIBM(),
-				 //supportsMergeStatement: version >= DB2iSeriesVersion.V7_1,
-				 //supportsNCharTypes: version >= DB2iSeriesVersion.V7_1
-				 mapGuidAsString
-				 ) {
-
+					providerType.IsIBM(),
+					mapGuidAsString
+					) {
 		}
 
 		DB2iSeriesVersion version;

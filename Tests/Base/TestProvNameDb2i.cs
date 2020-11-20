@@ -1,12 +1,10 @@
-﻿using System;
+﻿using LinqToDB.DataProvider.DB2iSeries;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using LinqToDB.DataProvider.DB2iSeries;
 
-namespace Tests
-{
-	public static class TestProvNameDb2i
-	{
+namespace Tests {
+	public static class TestProvNameDb2i {
 		public const string DB2iBase = "DB2.iSeries";
 
 		public const string All = DB2iBase;
@@ -22,10 +20,9 @@ namespace Tests
 
 		public const string All_NonGAS = "DB2.iSeries.NonGAS";
 		public const string All_GAS = "DB2.iSeries.GAS";
-		
+
 		private static IEnumerable<string> GetProviders(Func<DB2iSeriesProviderOptions, bool> predicate)
-			=> DB2iSeriesProviderName.AllNames.Where(x =>
-			predicate(DB2iSeriesProviderName.GetProviderOptions(x)));
+			=> DB2iSeriesProviderName.AllNames.Where(x =>	predicate(new DB2iSeriesProviderOptions(x)));
 
 		private static IEnumerable<string> GetProviders(Func<string, bool> predicate)
 			=> DB2iSeriesProviderName.AllNames.Where(predicate);
@@ -53,31 +50,27 @@ namespace Tests
 		public static IEnumerable<string> GetGAS() => GetProvidersContaing("GAS");
 		public static IEnumerable<string> GetNonGAS() => GetProviders(x => !x.Contains("GAS"));
 
-		public static IEnumerable<string> GetProviders(string context)
-		{
-			return context switch
-			{
-				LinqToDB.ProviderName.DB2 => GetAll(),
-				All => GetAll(),
-				All_AccessClient => GetAccessClient(),
-				All_ODBC => GetODBC(),
-				All_OleDb => GetOleDb(),
-				All_DB2Connect => GetDB2Connect(),
+		public static IEnumerable<string> GetProviders(string context) => context switch {
+			LinqToDB.ProviderName.DB2 => GetAll(),
+			All => GetAll(),
+			All_AccessClient => GetAccessClient(),
+			All_ODBC => GetODBC(),
+			All_OleDb => GetOleDb(),
+			All_DB2Connect => GetDB2Connect(),
 
-				All_54 => Get54(),
-				All_71 => Get71(),
-				All_72 => Get72(),
-				All_73 => Get73(),
+			All_54 => Get54(),
+			All_71 => Get71(),
+			All_72 => Get72(),
+			All_73 => Get73(),
 
-				All_GAS => GetGAS(),
-				All_NonGAS => GetNonGAS(),
-				_ => Enumerable.Empty<string>()
-			};
-		}
+			All_GAS => GetGAS(),
+			All_NonGAS => GetNonGAS(),
+			_ => Enumerable.Empty<string>()
+		};
 
 		public static IEnumerable<string> GetProviders(IEnumerable<string> contexts)
 			=> contexts.SelectMany(GetProviders).Distinct();
-		
+
 		public static string GetConcatenatedProviders(IEnumerable<string> contexts)
 			=> string.Join(",", GetProviders(contexts));
 
@@ -87,11 +80,10 @@ namespace Tests
 		public static bool IsiSeriesDB2Connect(string provider) => provider.StartsWith(DB2iBase) && provider.ToUpper().Contains("CONNECT");
 		public static bool IsiSeriesAccessClient(string provider) => IsiSeries(provider) && !IsiSeriesODBC(provider) && !IsiSeriesOleDb(provider) && !IsiSeriesDB2Connect(provider);
 
-		public static string GetFamily(string provider)
-		{
-			if (IsiSeries(provider))
+		public static string GetFamily(string provider) {
+			if(IsiSeries(provider))
 				return DB2iBase;
-			else 
+			else
 				return provider;
 		}
 	}

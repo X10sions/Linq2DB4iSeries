@@ -1,10 +1,8 @@
 ﻿using LinqToDB.Extensions;
 using System.Linq;
 
-namespace LinqToDB.DataProvider.DB2iSeries
-{
-	public static class DB2iSeriesProviderName
-	{
+namespace LinqToDB.DataProvider.DB2iSeries {
+	public static class DB2iSeriesProviderName {
 		public const string DB2 = "DB2.iSeries";
 		public const string DB2_GAS = "DB2.iSeries.GAS";
 
@@ -56,76 +54,49 @@ namespace LinqToDB.DataProvider.DB2iSeries
 			.ToArray();
 
 		public static DB2iSeriesProviderType GetProviderType(string providerName)
-		{
-			if (providerName.Contains(".OleDb"))
-				return DB2iSeriesProviderType.OleDb;
-			else if (providerName.Contains(".ODBC"))
-				return DB2iSeriesProviderType.Odbc;
+			=> providerName.Contains(".OleDb") ? DB2iSeriesProviderType.OleDb
+			: providerName.Contains(".ODBC") ? DB2iSeriesProviderType.Odbc
 #if NETFRAMEWORK
-			else if (providerName.Contains(".Net"))
-				return DB2iSeriesProviderType.AccessClient;
+			: providerName.Contains(".Net") ? DB2iSeriesProviderType.AccessClient
 #endif
-			else if (providerName.Contains(".DB2Connect"))
-				return DB2iSeriesProviderType.DB2;
-			else
-				throw ExceptionHelper.InvalidProviderName(providerName);
-		}
+			: providerName.Contains(".DB2Connect") ? DB2iSeriesProviderType.DB2
+			: throw ExceptionHelper.InvalidProviderName(providerName);
 
-		public static DB2iSeriesProviderOptions GetProviderOptions(string providerName)
-		{
-			var providerType = GetProviderType(providerName);
-			
-			var version = DB2iSeriesVersion.V7_1;
 
-			if (providerName.Contains("54"))
-				version = DB2iSeriesVersion.V5_4;
-			else if (providerName.Contains("72"))
-				version = DB2iSeriesVersion.V7_2;
-			else if (providerName.Contains("73"))
-				version = DB2iSeriesVersion.V7_3;
-
-			var mapGuidAsString = providerName.Contains("GAS");
-
-			return new DB2iSeriesProviderOptions(providerName, providerType, version)
-			{
-				MapGuidAsString = mapGuidAsString
-			};
-		}
+		public static DB2iSeriesVersion GetDB2iSeriesVersion(string providerName)
+			=> providerName.Contains("73") ? DB2iSeriesVersion.V7_3
+			: providerName.Contains("72") ? DB2iSeriesVersion.V7_2
+			: providerName.Contains("71") ? DB2iSeriesVersion.V7_1
+			: providerName.Contains("54") ? DB2iSeriesVersion.V5_4
+			: default;
 
 		public static string GetProviderName(
 			DB2iSeriesVersion version,
 			DB2iSeriesProviderType providerType,
-			DB2iSeriesMappingOptions mappingOptions)
-		{
-			var mapGuidAsString = mappingOptions.MapGuidAsString;
+			bool mapGuidAsString) {
 
-			return providerType switch
-			{
+			return providerType switch {
 #if NETFRAMEWORK
-				DB2iSeriesProviderType.AccessClient => version switch
-				{
+				DB2iSeriesProviderType.AccessClient => version switch {
 					DB2iSeriesVersion.V5_4 => mapGuidAsString ? DB2_AccessClient_54_GAS : DB2_AccessClient_54,
 					DB2iSeriesVersion.V7_1 => mapGuidAsString ? DB2_AccessClient_71_GAS : DB2_AccessClient_71,
 					DB2iSeriesVersion.V7_2 => mapGuidAsString ? DB2_AccessClient_72_GAS : DB2_AccessClient_72,
 					_ => mapGuidAsString ? DB2_AccessClient_73_GAS : DB2_AccessClient_73,
 				},
 #endif
-				DB2iSeriesProviderType.Odbc => version switch
-				{
+				DB2iSeriesProviderType.Odbc => version switch {
 					DB2iSeriesVersion.V5_4 => mapGuidAsString ? DB2_ODBC_54_GAS : DB2_ODBC_54,
 					DB2iSeriesVersion.V7_1 => mapGuidAsString ? DB2_ODBC_71_GAS : DB2_ODBC_71,
 					DB2iSeriesVersion.V7_2 => mapGuidAsString ? DB2_ODBC_72_GAS : DB2_ODBC_72,
 					_ => mapGuidAsString ? DB2_ODBC_73_GAS : DB2_ODBC_73,
 				},
-				DB2iSeriesProviderType.OleDb => version switch
-				{
+				DB2iSeriesProviderType.OleDb => version switch {
 					DB2iSeriesVersion.V5_4 => mapGuidAsString ? DB2_OleDb_54_GAS : DB2_OleDb_54,
 					DB2iSeriesVersion.V7_1 => mapGuidAsString ? DB2_OleDb_71_GAS : DB2_OleDb_71,
 					DB2iSeriesVersion.V7_2 => mapGuidAsString ? DB2_OleDb_72_GAS : DB2_OleDb_72,
 					_ => mapGuidAsString ? DB2_OleDb_73_GAS : DB2_OleDb_73,
 				},
-				DB2iSeriesProviderType.DB2 => version switch
-				{
+				DB2iSeriesProviderType.DB2 => version switch {
 					DB2iSeriesVersion.V5_4 => mapGuidAsString ? DB2_DB2Connect_54_GAS : DB2_DB2Connect_54,
 					DB2iSeriesVersion.V7_1 => mapGuidAsString ? DB2_DB2Connect_71_GAS : DB2_DB2Connect_71,
 					DB2iSeriesVersion.V7_2 => mapGuidAsString ? DB2_DB2Connect_72_GAS : DB2_DB2Connect_72,
