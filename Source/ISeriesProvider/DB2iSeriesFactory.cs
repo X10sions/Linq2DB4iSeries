@@ -14,6 +14,7 @@ namespace LinqToDB.DataProvider.DB2iSeries
 			{
 				var x when x.StartsWith("7.3.") || x == "7.3" || x == "7_3" => DB2iSeriesVersion.V7_3,
 				var x when x.StartsWith("7.2.") || x == "7.2" || x == "7_2" => DB2iSeriesVersion.V7_2,
+				var x when x.StartsWith("5.4.") || x == "5.4" || x == "5_4" => DB2iSeriesVersion.V5_4,
 				_ => DB2iSeriesVersion.V7_1
 			};
 
