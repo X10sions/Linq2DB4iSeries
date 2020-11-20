@@ -745,21 +745,21 @@ namespace Tests.DataProvider {
 		public void TestEnum2(string context) {
 			using(var conn = new DataConnection(context)) {
 				Assert.That(
-					conn.ExecuteScalarParameterObject<string>("p", "nvarchar(10)", new { p = TestEnum.AA }),
+					conn.ExecuteScalarParameterObject<string>("p", "varchar(10)", new { p = TestEnum.AA }),
 					Is.EqualTo("A"));
 				Assert.That(
-					conn.ExecuteScalarParameterObject<string>("p", "nvarchar(10)", new { p = (TestEnum?)TestEnum.BB }),
+					conn.ExecuteScalarParameterObject<string>("p", "varchar(10)", new { p = (TestEnum?)TestEnum.BB }),
 					Is.EqualTo("B"));
 				Assert.That(
-					conn.ExecuteScalarParameterObject<string>("p", "nvarchar(10)",
+					conn.ExecuteScalarParameterObject<string>("p", "varchar(10)",
 						new { p = ConvertTo<string>.From((TestEnum?)TestEnum.AA) }),
 					Is.EqualTo("A"));
 				Assert.That(
-					conn.ExecuteScalarParameterObject<string>("p", "nvarchar(10)",
+					conn.ExecuteScalarParameterObject<string>("p", "varchar(10)",
 						new { p = ConvertTo<string>.From(TestEnum.AA) }),
 					Is.EqualTo("A"));
 				Assert.That(
-					conn.ExecuteScalarParameterObject<string>("p", "nvarchar(10)",
+					conn.ExecuteScalarParameterObject<string>("p", "varchar(10)",
 						new { p = conn.MappingSchema.GetConverter<TestEnum?, string>()(TestEnum.AA) }),
 					Is.EqualTo("A"));
 			}
