@@ -10,6 +10,8 @@
 
 	public static class DB2iSeriesVersionExtensions {
 
+		public static bool SupportsArrayType(this DB2iSeriesVersion version) => version >= DB2iSeriesVersion.V7_1;
+
 		public static bool SupportsDecFloatTypes(this DB2iSeriesVersion version) => version > DB2iSeriesVersion.V5_4;
 
 		public static bool SupportsOffsetClause(this DB2iSeriesVersion version) => version > DB2iSeriesVersion.V7_2;
@@ -19,6 +21,10 @@
 		public static bool SupportsMergeStatement(this DB2iSeriesVersion version) => version > DB2iSeriesVersion.V5_4;
 
 		public static bool SupportsNCharTypes(this DB2iSeriesVersion version) => version > DB2iSeriesVersion.V5_4;
+
+		public static bool SupportsXmlType(this DB2iSeriesVersion version) => version >= DB2iSeriesVersion.V7_1;
+
+		public static int MaxTimestampPrecision(this DB2iSeriesVersion version) => version < DB2iSeriesVersion.V7_2 ? 6:12;
 
 	}
 }
