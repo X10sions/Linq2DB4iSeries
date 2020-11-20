@@ -158,7 +158,7 @@ namespace LinqToDB.DataProvider.DB2iSeries {
 			  ";
 
 			//And {GetSchemaFilter("col.TBCREATOR")}
-			var defaultSchema = dataConnection.Execute<string>($"select current_schema from {dataConnection.GetNamingConvetion().DummyTableName()}");
+			var defaultSchema = dataConnection.Execute<string>($"select current_schema from {dataConnection.GetNamingConvention().GetDummyTableName()}");
 
 			ProcedureInfo drf(IDataReader dr) {
 				return new ProcedureInfo {
@@ -271,7 +271,7 @@ namespace LinqToDB.DataProvider.DB2iSeries {
 				  Order By System_Table_Schema, System_Table_Name
 				 ";
 
-			var defaultSchema = dataConnection.Execute<string>($"select current_schema from {dataConnection.GetNamingConvetion().DummyTableName()}");
+			var defaultSchema = dataConnection.Execute<string>($"select current_schema from {dataConnection.GetNamingConvention().GetDummyTableName()}");
 
 			TableInfo drf(IDataReader dr) => new TableInfo {
 				CatalogName = dr["Catalog_Name"].ToString().TrimEnd(),

@@ -73,7 +73,7 @@ namespace LinqToDB.DataProvider.DB2iSeries {
 
 		protected override void BuildInsertOrUpdateQuery(SqlInsertOrUpdateStatement insertOrUpdate) {
 			if(DB2iSeriesSqlProviderFlags.SupportsMergeStatement)
-				BuildInsertOrUpdateQueryAsMerge(insertOrUpdate, $"FROM {Provider.ProviderOptions.NamingConvention.DummyTableName()} FETCH FIRST 1 ROW ONLY");
+				BuildInsertOrUpdateQueryAsMerge(insertOrUpdate, $"FROM {Provider.ProviderOptions.NamingConvention.GetDummyTableName()} FETCH FIRST 1 ROW ONLY");
 			else
 				base.BuildInsertOrUpdateQuery(insertOrUpdate);
 		}
@@ -148,7 +148,7 @@ namespace LinqToDB.DataProvider.DB2iSeries {
 					StringBuilder.AppendLine(" RESTART WITH 1");
 				}
 			} else {
-				StringBuilder.AppendLine($"SELECT {Constants.SQL.LastInsertedIdentityGetter} FROM {Provider.ProviderOptions.NamingConvention.DummyTableName()}");
+				StringBuilder.AppendLine($"SELECT {Constants.SQL.LastInsertedIdentityGetter} FROM {Provider.ProviderOptions.NamingConvention.GetDummyTableName()}");
 			}
 		}
 
@@ -218,7 +218,7 @@ namespace LinqToDB.DataProvider.DB2iSeries {
 			if(selectQuery.From.Tables.Count == 0) {
 				AppendIndent().AppendLine("SELECT");
 				BuildColumns(selectQuery);
-				AppendIndent().AppendLine($"FROM {Provider.ProviderOptions.NamingConvention.DummyTableName()}");
+				AppendIndent().AppendLine($"FROM {Provider.ProviderOptions.NamingConvention.GetDummyTableName()}");
 			} else {
 				if(Provider.ProviderOptions.ProviderType.IsOleDb()) {
 					AppendIndent();
