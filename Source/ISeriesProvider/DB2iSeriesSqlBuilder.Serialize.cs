@@ -49,7 +49,7 @@ namespace LinqToDB.DataProvider.DB2iSeries
 
 				_ => value.Millisecond == 0 ?
 						"{0:yyyy-MM-dd HH:mm:ss}" :
-						"{0:yyyy-MM-dd HH:mm:ss.fffffff}"
+						"{0:yyyy-MM-dd HH:mm:ss.ffffff}"
 			};
 
 			if (quoted) stringBuilder.Append("'");
