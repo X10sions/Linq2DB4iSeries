@@ -24,9 +24,76 @@ namespace LinqToDB.DataProvider.DB2iSeries {
 		public static bool IsGuidMappedAsString(this MappingSchema mappingSchema) => mappingSchema is DB2iSeriesMappingSchemaBase iseriesMappingSchema
 				&& iseriesMappingSchema.GuidMappedAsString;
 
+		public static DB2iSeriesVersion GetDB2iSeriesVersion(this Version version) => version switch {
+			//var x when x >= new Version(7, 4) => DB2iSeriesVersion.V7_4,
+			var x when x >= new Version(7, 3) => DB2iSeriesVersion.V7_3,
+			var x when x >= new Version(7, 2) => DB2iSeriesVersion.V7_2,
+			var x when x >= new Version(7, 1) => DB2iSeriesVersion.V7_1,
+			//var x when x >= new Version(6, 1) => DB2iSeriesVersion.V6_1,
+			var x when x >= new Version(5, 4) => DB2iSeriesVersion.V5_4,
+			_ => DB2iSeriesVersion.V7_1
+		};
+
+		//public static Version AsVersion(string serverVersion) {
+		//	var serverVersionParts = serverVersion.Split('.');
+		//	var major = int.Parse(serverVersionParts[0]);
+		//	var minor = int.Parse(serverVersionParts[1]);
+		//	var build = int.Parse(serverVersionParts[2]);
+		//	return new Version(major, minor, build);
+		//}
+
+		public static Version GetVersion(this IDbConnection connection) {
+			if(connection is DbConnection) {
+				var dbConnection = connection as DbConnection;
+			var doOpenclose = dbConnection.State != ConnectionState.Open;
+			if(doOpenclose)
+				dbConnection.Open();
+			//var version = AsVersion(dbConnection.ServerVersion);
+			var version = new Version(dbConnection.ServerVersion.Split(' ')[0]);
+			if(doOpenclose)
+				dbConnection.Close();
+			return version;
+			}
+			return new Version();
+		}
+
+		public static Version GetVersion(this IDataProvider dataProvider, string connectionString) {
+			using(var conn = (DbConnection)dataProvider.CreateConnection(connectionString)) {
+				conn.Open();
+				return conn.GetVersion();
+			}
+		}
+
+		public static Version GetVersion(this DataConnection dataConnection) => ((DbConnection)dataConnection.Connection).GetVersion();
+
+
 		public static DbDataType GetDbDataType(this MappingSchema mappingSchema, Type systemType, DataType dataType, int? length, int? precision, int? scale, bool forceDefaultAttributes, DB2iSeriesVersion db2iVersion) => DB2iSeriesDbTypes.GetDbDataType(systemType, dataType, length, precision, scale, mappingSchema.IsGuidMappedAsString(), forceDefaultAttributes, db2iVersion);
 
 		public static DbDataType GetDbTypeForCast(this MappingSchema mappingSchema, SqlDataType type, DB2iSeriesVersion db2iVersion) => DB2iSeriesDbTypes.GetDbTypeForCast(type, mappingSchema, db2iVersion);
+
+		public static string GetDelimiter(this DataConnection dataConnection)
+			=> dataConnection.GetNamingConvention().GetDelimiter();
+
+		public static DB2iSeriesNamingConvention GetNamingConvention(this DataConnection dataConnection) {
+				return new DbConnectionStringBuilder() { ConnectionString = dataConnection.ConnectionString }.GetNamingConvention();
+		}
+
+		public static DB2iSeriesNamingConvention GetNamingConvention(this DbConnectionStringBuilder csb) {
+			foreach(var key in new[] {
+				"NAM",
+//#if NETFRAMEWORK
+				"Naming",
+//#endif
+				"Naming Convention" }) {
+				var value = csb[key].ToString().ToLower();
+				switch( value ){
+					case "1":
+					case "system":
+						return DB2iSeriesNamingConvention.System;
+				}
+			}
+			return DB2iSeriesNamingConvention.Sql;
+		}
 
 		public static IDbConnection GetProviderConnection(this DataConnection dataConnection) {
 			if(!(dataConnection.DataProvider is DB2iSeriesDataProvider iSeriesDataProvider))
@@ -74,29 +141,6 @@ namespace LinqToDB.DataProvider.DB2iSeries {
 			}
 
 			return Enumerable.Empty<string>();
-		}
-
-		public static string GetDelimiter(this DataConnection dataConnection) => dataConnection.GetNamingConvetion().Delimiter();
-
-		public static DB2iSeriesNamingConvention GetNamingConvetion(this DataConnection dataConnection) {
-			if(dataConnection.DataProvider is DB2iSeriesDataProvider iSeriesDataProvider
-				&& iSeriesDataProvider.ProviderOptions.ProviderType != DB2iSeriesProviderType.DB2) {
-				var namingConventionKey = iSeriesDataProvider.ProviderOptions.ProviderType switch {
-#if NETFRAMEWORK
-					DB2iSeriesProviderType.AccessClient => "Naming",
-#endif
-					DB2iSeriesProviderType.Odbc => "NAM",
-					DB2iSeriesProviderType.OleDb => "Naming Convention",
-					_ => throw ExceptionHelper.InvalidAdoProvider(iSeriesDataProvider.ProviderOptions.ProviderType)
-				};
-				var csb = new DbConnectionStringBuilder() { ConnectionString = dataConnection.ConnectionString };
-				if(csb.TryGetValue(namingConventionKey, out var namingConvention)) {
-					if(!(namingConvention is string namingConventionString))
-						namingConventionString = ((int)namingConvention).ToString();
-					return namingConventionString == "1" ? DB2iSeriesNamingConvention.System : DB2iSeriesNamingConvention.Sql;
-				}
-			}
-			return DB2iSeriesNamingConvention.Sql;
 		}
 
 		public static void SetFlag(this SqlProviderFlags sqlProviderFlags, string flag, bool isSet) {

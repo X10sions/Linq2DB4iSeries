@@ -23,8 +23,7 @@ namespace Tests.DataProvider {
 
 	static class DB2iSeriesTestQueryExtensions {
 		public static T ExecuteScalar<T>(this DataConnection connection, string value, string castTo = null)
-			=> connection.Execute<T>(GetScalarQuery(value, connection.GetNamingConvetion(), castTo));
-
+			=> connection.Execute<T>(GetScalarQuery(value, connection.GetNamingConvention(), castTo));
 
 		public static T ExecuteScalarParameter<T>(this DataConnection connection, string parameterName, string parameterType, object parameterValue, DataType? dataType = null) {
 			var parameter = new DataParameter(parameterName, parameterValue);
@@ -42,7 +41,7 @@ namespace Tests.DataProvider {
 			if(dataType.HasValue)
 				dataParameter.DataType = dataType.Value;
 
-			return connection.Execute<T>(GetScalarParameterQuery(dataParameter.Name, parameterType, connection.GetNamingConvetion()), dataParameter);
+			return connection.Execute<T>(GetScalarParameterQuery(dataParameter.Name, parameterType, connection.GetNamingConvention()), dataParameter);
 		}
 
 		public static T ExecuteScalarParameterObject<T>(this DataConnection connection, string parameterName, string parameterType, object parameterValuesObject) {
@@ -52,11 +51,11 @@ namespace Tests.DataProvider {
 				parameterName = "?";
 			}
 
-			return connection.Execute<T>(GetScalarParameterQuery(parameterName, parameterType, connection.GetNamingConvetion()), parameterValuesObject);
+			return connection.Execute<T>(GetScalarParameterQuery(parameterName, parameterType, connection.GetNamingConvention()), parameterValuesObject);
 		}
 
 		public static T ExecuteScalarParameterObject<T>(this DataConnection connection, string expression, object parameterValuesObject)
-			=> connection.Execute<T>(GetScalarQuery(expression, connection.GetNamingConvetion()), parameterValuesObject);
+			=> connection.Execute<T>(GetScalarQuery(expression, connection.GetNamingConvention()), parameterValuesObject);
 
 		private static string GetScalarQuery(string value, DB2iSeriesNamingConvention naming, string castTo = null) {
 			var sb = new StringBuilder().Append("SELECT ");
@@ -65,14 +64,14 @@ namespace Tests.DataProvider {
 			sb.Append(value);
 			if(!string.IsNullOrEmpty(castTo))
 				sb.Append(" AS ").Append(castTo).Append(")");
-			sb.Append($"FROM {naming.DummyTableName()}");
+			sb.Append($"FROM {naming.GetDummyTableName()}");
 			return sb.ToString();
 		}
 
 		private static string GetScalarParameterQuery(string parameterName, string parameterType, DB2iSeriesNamingConvention naming) {
 			var sb = new StringBuilder()
 				.Append($"SELECT CAST({(parameterName == "?" ? "" : "@")}{parameterName} AS {parameterType})")
-				.Append($"FROM {naming.DummyTableName()}");
+				.Append($"FROM {naming.GetDummyTableName()}");
 			return sb.ToString();
 		}
 
